@@ -19,20 +19,32 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![cfg_attr(not(feature = "std"), no_std)]
+//! Generic traits for working with collection types from `alloc` and `std`.
+//!
+//! [`Collection`] provides a common interface for sequences, sets, maps and
+//! heaps. [`KeyedCollection`] adds map operations, including access to each
+//! collection's native entry type through [`MapEntry`]. The crate works in
+//! `no_std` environments when an allocator is available.
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![warn(missing_docs)]
+
+/// Re-export of `alloc` for no-`std` callers and macro expansion.
 pub extern crate alloc;
 extern crate core;
 
 #[cfg(feature = "ascii")]
+/// Re-export of the optional `ascii` dependency.
 pub extern crate ascii;
 #[cfg(feature = "indexmap")]
+/// Re-export of the optional `indexmap` dependency.
 pub extern crate indexmap;
 
 mod traits;
 mod linear;
 mod btrees;
+mod heap;
 #[cfg(feature = "std")]
 mod hashed;
 #[cfg(feature = "ascii")]
@@ -40,11 +52,16 @@ mod asciistr;
 #[cfg(feature = "indexmap")]
 mod indexed;
 
-#[cfg(feature = "std")]
 #[macro_use]
-mod macro_std;
-#[cfg(not(feature = "std"))]
-#[macro_use]
-mod macro_alloc;
+mod macros;
 
-pub use traits::{Collection, KeyedCollection};
+#[cfg(feature = "std")]
+#[doc(hidden)]
+pub extern crate std;
+
+pub use traits::{Collection, KeyedCollection, MapEntry};
+
+#[cfg(all(doctest, feature = "std"))]
+#[doc(hidden)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;

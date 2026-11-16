@@ -11,3 +11,6 @@
 
 /dep_test
 default*.profraw
+.DS_Store
+/tests/no_std_consumer/Cargo.lock
+/tests/no_std_consumer/target

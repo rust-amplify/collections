@@ -20,15 +20,15 @@
 // the License.
 
 use std::collections::{HashMap, HashSet, hash_map};
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
 
-use super::{Collection, KeyedCollection};
+use super::{Collection, KeyedCollection, MapEntry};
 
-impl<T: Eq + Hash> Collection for HashSet<T> {
+impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
     type Item = T;
 
     fn with_capacity(capacity: usize) -> Self {
-        HashSet::with_capacity(capacity)
+        HashSet::with_capacity_and_hasher(capacity, S::default())
     }
 
     fn len(&self) -> usize {
@@ -44,11 +44,11 @@ impl<T: Eq + Hash> Collection for HashSet<T> {
     }
 }
 
-impl<K: Eq + Hash, V> Collection for HashMap<K, V> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> {
     type Item = (K, V);
 
     fn with_capacity(capacity: usize) -> Self {
-        HashMap::with_capacity(capacity)
+        HashMap::with_capacity_and_hasher(capacity, S::default())
     }
 
     fn len(&self) -> usize {
@@ -64,14 +64,15 @@ impl<K: Eq + Hash, V> Collection for HashMap<K, V> {
     }
 }
 
-impl<K: Eq + Hash, V> KeyedCollection for HashMap<K, V> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> KeyedCollection for HashMap<K, V, S> {
     type Key = K;
     type Value = V;
     type Entry<'a>
         = hash_map::Entry<'a, K, V>
     where
         K: 'a,
-        V: 'a;
+        V: 'a,
+        S: 'a;
 
     fn contains_key(&self, key: &Self::Key) -> bool {
         HashMap::contains_key(self, key)
@@ -87,6 +88,14 @@ impl<K: Eq + Hash, V> KeyedCollection for HashMap<K, V> {
 
     fn iter(&self) -> impl Iterator<Item = (&Self::Key, &Self::Value)> {
         HashMap::iter(self)
+    }
+
+    fn keys(&self) -> impl Iterator<Item = &Self::Key> {
+        HashMap::keys(self)
+    }
+
+    fn values(&self) -> impl Iterator<Item = &Self::Value> {
+        HashMap::values(self)
     }
 
     fn iter_mut(&mut self) -> impl Iterator<Item = (&Self::Key, &mut Self::Value)> {
@@ -111,5 +120,33 @@ impl<K: Eq + Hash, V> KeyedCollection for HashMap<K, V> {
 
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         HashMap::retain(self, f)
+    }
+}
+
+impl<'a, K: 'a, V: 'a> MapEntry<'a> for hash_map::Entry<'a, K, V> {
+    type Key = K;
+    type Value = V;
+
+    fn key(&self) -> &Self::Key {
+        hash_map::Entry::key(self)
+    }
+
+    fn or_insert(self, default: Self::Value) -> &'a mut Self::Value {
+        hash_map::Entry::or_insert(self, default)
+    }
+
+    fn or_insert_with<F: FnOnce() -> Self::Value>(self, default: F) -> &'a mut Self::Value {
+        hash_map::Entry::or_insert_with(self, default)
+    }
+
+    fn or_default(self) -> &'a mut Self::Value
+    where
+        Self::Value: Default,
+    {
+        hash_map::Entry::or_default(self)
+    }
+
+    fn and_modify<F: FnOnce(&mut Self::Value)>(self, f: F) -> Self {
+        hash_map::Entry::and_modify(self, f)
     }
 }

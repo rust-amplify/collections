@@ -19,7 +19,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-use alloc::collections::VecDeque;
+use alloc::collections::{LinkedList, VecDeque};
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -82,5 +82,25 @@ impl<T> Collection for VecDeque<T> {
 
     fn clear(&mut self) {
         VecDeque::clear(self)
+    }
+}
+
+impl<T> Collection for LinkedList<T> {
+    type Item = T;
+
+    fn with_capacity(_capacity: usize) -> Self {
+        LinkedList::new()
+    }
+
+    fn len(&self) -> usize {
+        LinkedList::len(self)
+    }
+
+    fn push(&mut self, elem: Self::Item) {
+        LinkedList::push_back(self, elem)
+    }
+
+    fn clear(&mut self) {
+        LinkedList::clear(self)
     }
 }

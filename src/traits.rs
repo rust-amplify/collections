@@ -19,17 +19,27 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-use core::hash::Hash;
-
 /// Trait implemented by all collection types.
+///
+/// # Collection contract
+///
+/// `len()` reports the number of items for collections and the number of bytes
+/// for `String`. `push()` appends to sequences and linked lists, adds to a
+/// `BinaryHeap`, inserts into sets and maps, and appends a UTF-8 encoded `char`
+/// to `String`. Duplicate set values do not increase the length; inserting an
+/// existing map key replaces its value.
+///
+/// `with_capacity()` reserves space for the requested number of items for
+/// sequences, heaps, sets and maps, or bytes for `String`. `BTreeSet`,
+/// `BTreeMap` and `LinkedList` cannot reserve capacity and ignore the argument.
 pub trait Collection: FromIterator<Self::Item> + Extend<Self::Item> {
     /// Item type contained within the collection.
     type Item;
 
-    /// Creates a new collection with certain capacity.
+    /// Creates a new collection with the requested capacity where supported.
     fn with_capacity(capacity: usize) -> Self;
 
-    /// Returns the length of a collection.
+    /// Returns the number of items, or the number of bytes for `String`.
     fn len(&self) -> usize;
 
     /// Detects whether a collection is empty.
@@ -38,7 +48,7 @@ pub trait Collection: FromIterator<Self::Item> + Extend<Self::Item> {
         self.len() == 0
     }
 
-    /// Pushes or inserts an element to the collection.
+    /// Appends or inserts an element into the collection.
     fn push(&mut self, elem: Self::Item);
 
     /// Removes all elements from the collection.
@@ -48,10 +58,11 @@ pub trait Collection: FromIterator<Self::Item> + Extend<Self::Item> {
 /// Trait implemented by key-value maps.
 pub trait KeyedCollection: Collection<Item = (Self::Key, Self::Value)> {
     /// Key type for the collection.
-    type Key: Eq + Hash;
+    type Key;
     /// Value type for the collection.
     type Value;
-    type Entry<'a>
+    /// Native entry type used for in-place map operations.
+    type Entry<'a>: MapEntry<'a, Key = Self::Key, Value = Self::Value>
     where
         Self: 'a;
 
@@ -66,6 +77,16 @@ pub trait KeyedCollection: Collection<Item = (Self::Key, Self::Value)> {
 
     /// Returns iterator over keys and values.
     fn iter(&self) -> impl Iterator<Item = (&Self::Key, &Self::Value)>;
+
+    /// Returns an iterator over the keys.
+    fn keys(&self) -> impl Iterator<Item = &Self::Key> {
+        self.iter().map(|(key, _)| key)
+    }
+
+    /// Returns an iterator over the values.
+    fn values(&self) -> impl Iterator<Item = &Self::Value> {
+        self.iter().map(|(_, value)| value)
+    }
 
     /// Returns iterator over keys and mutable values.
     fn iter_mut(&mut self) -> impl Iterator<Item = (&Self::Key, &mut Self::Value)>;
@@ -91,4 +112,29 @@ pub trait KeyedCollection: Collection<Item = (Self::Key, Self::Value)> {
     /// returns `false`. The elements are visited in unsorted (and
     /// unspecified) order.
     fn retain(&mut self, f: impl FnMut(&Self::Key, &mut Self::Value) -> bool);
+}
+
+/// Common interface over the native entry types of maps.
+pub trait MapEntry<'a>: Sized {
+    /// Key type stored in the map.
+    type Key;
+    /// Value type stored in the map.
+    type Value: 'a;
+
+    /// Returns the key associated with this entry.
+    fn key(&self) -> &Self::Key;
+
+    /// Inserts the provided value if the entry is vacant, then returns it.
+    fn or_insert(self, default: Self::Value) -> &'a mut Self::Value;
+
+    /// Inserts a value produced by `default` if the entry is vacant.
+    fn or_insert_with<F: FnOnce() -> Self::Value>(self, default: F) -> &'a mut Self::Value;
+
+    /// Inserts the default value if the entry is vacant.
+    fn or_default(self) -> &'a mut Self::Value
+    where
+        Self::Value: Default;
+
+    /// Applies `f` to the value if the entry is occupied.
+    fn and_modify<F: FnOnce(&mut Self::Value)>(self, f: F) -> Self;
 }

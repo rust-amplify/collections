@@ -1,0 +1,9 @@
+[package]
+name = "collections-no-std-consumer"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+collections = { path = "../..", default-features = false, features = ["std"] }
+
+[workspace]

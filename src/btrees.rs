@@ -20,14 +20,13 @@
 // the License.
 
 use alloc::collections::{BTreeMap, BTreeSet, btree_map};
-use core::hash::Hash;
 
-use super::{Collection, KeyedCollection};
+use super::{Collection, KeyedCollection, MapEntry};
 
 impl<T: Ord> Collection for BTreeSet<T> {
     type Item = T;
 
-    #[doc(hidden)]
+    /// B-tree collections cannot reserve capacity, so this argument is ignored.
     fn with_capacity(_capacity: usize) -> Self {
         BTreeSet::new()
     }
@@ -45,10 +44,10 @@ impl<T: Ord> Collection for BTreeSet<T> {
     }
 }
 
-impl<K: Ord + Hash, V> Collection for BTreeMap<K, V> {
+impl<K: Ord, V> Collection for BTreeMap<K, V> {
     type Item = (K, V);
 
-    #[doc(hidden)]
+    /// B-tree collections cannot reserve capacity, so this argument is ignored.
     fn with_capacity(_capacity: usize) -> Self {
         BTreeMap::new()
     }
@@ -66,7 +65,7 @@ impl<K: Ord + Hash, V> Collection for BTreeMap<K, V> {
     }
 }
 
-impl<K: Ord + Hash, V> KeyedCollection for BTreeMap<K, V> {
+impl<K: Ord, V> KeyedCollection for BTreeMap<K, V> {
     type Key = K;
     type Value = V;
     type Entry<'a>
@@ -91,6 +90,14 @@ impl<K: Ord + Hash, V> KeyedCollection for BTreeMap<K, V> {
         BTreeMap::iter(self)
     }
 
+    fn keys(&self) -> impl Iterator<Item = &Self::Key> {
+        BTreeMap::keys(self)
+    }
+
+    fn values(&self) -> impl Iterator<Item = &Self::Value> {
+        BTreeMap::values(self)
+    }
+
     fn iter_mut(&mut self) -> impl Iterator<Item = (&Self::Key, &mut Self::Value)> {
         BTreeMap::iter_mut(self)
     }
@@ -113,5 +120,33 @@ impl<K: Ord + Hash, V> KeyedCollection for BTreeMap<K, V> {
 
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         BTreeMap::retain(self, f)
+    }
+}
+
+impl<'a, K: Ord + 'a, V: 'a> MapEntry<'a> for btree_map::Entry<'a, K, V> {
+    type Key = K;
+    type Value = V;
+
+    fn key(&self) -> &Self::Key {
+        btree_map::Entry::key(self)
+    }
+
+    fn or_insert(self, default: Self::Value) -> &'a mut Self::Value {
+        btree_map::Entry::or_insert(self, default)
+    }
+
+    fn or_insert_with<F: FnOnce() -> Self::Value>(self, default: F) -> &'a mut Self::Value {
+        btree_map::Entry::or_insert_with(self, default)
+    }
+
+    fn or_default(self) -> &'a mut Self::Value
+    where
+        Self::Value: Default,
+    {
+        btree_map::Entry::or_default(self)
+    }
+
+    fn and_modify<F: FnOnce(&mut Self::Value)>(self, f: F) -> Self {
+        btree_map::Entry::and_modify(self, f)
     }
 }

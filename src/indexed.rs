@@ -19,17 +19,17 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-use core::hash::Hash;
+use core::hash::{BuildHasher, Hash};
 
 use indexmap::{IndexMap, IndexSet, map};
 
-use super::{Collection, KeyedCollection};
+use super::{Collection, KeyedCollection, MapEntry};
 
-impl<T: Eq + Hash> Collection for IndexSet<T> {
+impl<T: Eq + Hash, S: BuildHasher + Default> Collection for IndexSet<T, S> {
     type Item = T;
 
     fn with_capacity(capacity: usize) -> Self {
-        IndexSet::with_capacity(capacity)
+        IndexSet::with_capacity_and_hasher(capacity, S::default())
     }
 
     fn len(&self) -> usize {
@@ -45,11 +45,11 @@ impl<T: Eq + Hash> Collection for IndexSet<T> {
     }
 }
 
-impl<K: Eq + Hash, V> Collection for IndexMap<K, V> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for IndexMap<K, V, S> {
     type Item = (K, V);
 
     fn with_capacity(capacity: usize) -> Self {
-        IndexMap::with_capacity(capacity)
+        IndexMap::with_capacity_and_hasher(capacity, S::default())
     }
 
     fn len(&self) -> usize {
@@ -65,14 +65,15 @@ impl<K: Eq + Hash, V> Collection for IndexMap<K, V> {
     }
 }
 
-impl<K: Eq + Hash, V> KeyedCollection for IndexMap<K, V> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> KeyedCollection for IndexMap<K, V, S> {
     type Key = K;
     type Value = V;
     type Entry<'a>
         = map::Entry<'a, K, V>
     where
         K: 'a,
-        V: 'a;
+        V: 'a,
+        S: 'a;
 
     fn contains_key(&self, key: &Self::Key) -> bool {
         IndexMap::contains_key(self, key)
@@ -88,6 +89,14 @@ impl<K: Eq + Hash, V> KeyedCollection for IndexMap<K, V> {
 
     fn iter(&self) -> impl Iterator<Item = (&Self::Key, &Self::Value)> {
         IndexMap::iter(self)
+    }
+
+    fn keys(&self) -> impl Iterator<Item = &Self::Key> {
+        IndexMap::keys(self)
+    }
+
+    fn values(&self) -> impl Iterator<Item = &Self::Value> {
+        IndexMap::values(self)
     }
 
     fn iter_mut(&mut self) -> impl Iterator<Item = (&Self::Key, &mut Self::Value)> {
@@ -112,5 +121,33 @@ impl<K: Eq + Hash, V> KeyedCollection for IndexMap<K, V> {
 
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         IndexMap::retain(self, f)
+    }
+}
+
+impl<'a, K: 'a, V: 'a> MapEntry<'a> for map::Entry<'a, K, V> {
+    type Key = K;
+    type Value = V;
+
+    fn key(&self) -> &Self::Key {
+        map::Entry::key(self)
+    }
+
+    fn or_insert(self, default: Self::Value) -> &'a mut Self::Value {
+        map::Entry::or_insert(self, default)
+    }
+
+    fn or_insert_with<F: FnOnce() -> Self::Value>(self, default: F) -> &'a mut Self::Value {
+        map::Entry::or_insert_with(self, default)
+    }
+
+    fn or_default(self) -> &'a mut Self::Value
+    where
+        Self::Value: Default,
+    {
+        map::Entry::or_default(self)
+    }
+
+    fn and_modify<F: FnOnce(&mut Self::Value)>(self, f: F) -> Self {
+        map::Entry::and_modify(self, f)
     }
 }
