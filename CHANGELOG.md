@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-## [Unreleased]
+## _Unreleased_
 
 ### Added
 
@@ -12,6 +12,7 @@ Change Log
 
 ### Changed
 
+- The crate now uses Rust edition 2024 and requires Rust 1.85.0 or later.
 - Hash-based and index-based collection implementations now accept any hasher
   that implements `BuildHasher + Default`.
 - `BTreeMap` requires only `Ord` for its keys.

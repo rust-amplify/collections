@@ -9,8 +9,8 @@ keywords = ["generics", "core", "collections", "patterns"]
 categories = ["data-structures", "rust-patterns", "no-std"]
 readme = "README.md"
 license = "Apache-2.0"
-edition = "2021" # TODO: Update the edition in version 1.0
-rust-version = "1.75.0"
+edition = "2024"
+rust-version = "1.85.0" # Due to 2024 rust edition
 exclude = [".github"]
 
 [lib]

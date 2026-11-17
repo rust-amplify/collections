@@ -32,7 +32,6 @@
 
 /// Re-export of `alloc` for no-`std` callers and macro expansion.
 pub extern crate alloc;
-extern crate core;
 
 #[cfg(feature = "ascii")]
 /// Re-export of the optional `ascii` dependency.
@@ -52,7 +51,6 @@ mod asciistr;
 #[cfg(feature = "indexmap")]
 mod indexed;
 
-#[macro_use]
 mod macros;
 
 #[cfg(feature = "std")]

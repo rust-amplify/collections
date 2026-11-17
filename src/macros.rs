@@ -53,7 +53,7 @@ macro_rules! bmap {
         $crate::alloc::collections::BTreeMap::new()
     };
 
-    { owned: $($key:expr => $value:expr),+ $(,)? } => {{
+    { owned: $($key:expr_2021 => $value:expr_2021),+ $(,)? } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
         let mut map = $crate::alloc::collections::BTreeMap::new();
@@ -61,7 +61,7 @@ macro_rules! bmap {
         map
     }};
 
-    { $($key:expr => $value:expr),+ $(,)? } => {{
+    { $($key:expr_2021 => $value:expr_2021),+ $(,)? } => {{
         let mut map = $crate::alloc::collections::BTreeMap::new();
         $(map.insert($key, $value);)+
         map
@@ -86,7 +86,7 @@ macro_rules! bset {
         $crate::alloc::collections::BTreeSet::new()
     };
 
-    { owned: $($value:expr),+ $(,)? } => {{
+    { owned: $($value:expr_2021),+ $(,)? } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
         let mut set = $crate::alloc::collections::BTreeSet::new();
@@ -94,7 +94,7 @@ macro_rules! bset {
         set
     }};
 
-    { $($value:expr),+ $(,)? } => {{
+    { $($value:expr_2021),+ $(,)? } => {{
         let mut set = $crate::alloc::collections::BTreeSet::new();
         $(set.insert($value);)+
         set
@@ -120,7 +120,7 @@ macro_rules! list {
         $crate::alloc::collections::LinkedList::new()
     };
 
-    { owned: $($value:expr)=>+ } => {{
+    { owned: $($value:expr_2021)=>+ } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
         let mut list = $crate::alloc::collections::LinkedList::new();
@@ -128,7 +128,7 @@ macro_rules! list {
         list
     }};
 
-    { $($value:expr)=>+ } => {{
+    { $($value:expr_2021)=>+ } => {{
         let mut list = $crate::alloc::collections::LinkedList::new();
         $(list.push_back($value);)+
         list
@@ -154,7 +154,7 @@ macro_rules! map {
         $crate::std::collections::HashMap::new()
     };
 
-    { owned: $($key:expr => $value:expr),+ $(,)? } => {{
+    { owned: $($key:expr_2021 => $value:expr_2021),+ $(,)? } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
         let mut map = $crate::std::collections::HashMap::new();
@@ -162,7 +162,7 @@ macro_rules! map {
         map
     }};
 
-    { $($key:expr => $value:expr),+ $(,)? } => {{
+    { $($key:expr_2021 => $value:expr_2021),+ $(,)? } => {{
         let mut map = $crate::std::collections::HashMap::new();
         $(map.insert($key, $value);)+
         map
@@ -188,7 +188,7 @@ macro_rules! set {
         $crate::std::collections::HashSet::new()
     };
 
-    { owned: $($value:expr),+ $(,)? } => {{
+    { owned: $($value:expr_2021),+ $(,)? } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
         let mut set = $crate::std::collections::HashSet::new();
@@ -196,7 +196,7 @@ macro_rules! set {
         set
     }};
 
-    { $($value:expr),+ $(,)? } => {{
+    { $($value:expr_2021),+ $(,)? } => {{
         let mut set = $crate::std::collections::HashSet::new();
         $(set.insert($value);)+
         set

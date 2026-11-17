@@ -425,8 +425,8 @@ The macros may also be imported in the old style, with
 
 ## Minimum supported Rust version
 
-The MSRV is **1.75.0**: the traits use `impl Trait` in the return position of
-trait methods. The crate is written in Rust edition 2021.
+The MSRV is **1.85.0**, required by Rust edition 2024. The traits also use
+`impl Trait` in the return position of trait methods.
 
 CI checks the library with the MSRV, stable, beta and nightly toolchains on
 Linux, macOS and Windows (both x86-64 and ARM), and for the

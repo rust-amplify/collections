@@ -12,14 +12,12 @@ pub fn invoke_all_macros() {
     > = bmap! { owned: "key" => "value" };
     let _: collections::alloc::collections::BTreeSet<u8> = bset![];
     let _: collections::alloc::collections::BTreeSet<u8> = bset![1, 2];
-    let _: collections::alloc::collections::BTreeSet<
-        collections::alloc::string::String,
-    > = bset! { owned: "one", "two" };
+    let _: collections::alloc::collections::BTreeSet<collections::alloc::string::String> =
+        bset! { owned: "one", "two" };
     let _: collections::alloc::collections::LinkedList<u8> = list! {};
     let _: collections::alloc::collections::LinkedList<u8> = list! { 1 => 2 };
-    let _: collections::alloc::collections::LinkedList<
-        collections::alloc::string::String,
-    > = list! { owned: "one" => "two" };
+    let _: collections::alloc::collections::LinkedList<collections::alloc::string::String> =
+        list! { owned: "one" => "two" };
     let _: collections::std::collections::HashMap<u8, u8> = map! {};
     let _: collections::std::collections::HashMap<u8, u8> = map! { 1 => 2 };
     let _: collections::std::collections::HashMap<
@@ -28,7 +26,6 @@ pub fn invoke_all_macros() {
     > = map! { owned: "key" => "value" };
     let _: collections::std::collections::HashSet<u8> = set![];
     let _: collections::std::collections::HashSet<u8> = set![1, 2];
-    let _: collections::std::collections::HashSet<
-        collections::alloc::string::String,
-    > = set! { owned: "one", "two" };
+    let _: collections::std::collections::HashSet<collections::alloc::string::String> =
+        set! { owned: "one", "two" };
 }
