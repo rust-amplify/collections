@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 #[cfg(feature = "std")]
 use std::collections::HashSet;
-#[cfg(any(feature = "std", feature = "indexmap"))]
+#[cfg(any(feature = "std", feature = "indexmap", feature = "hashbrown"))]
 use std::collections::hash_map::DefaultHasher;
-#[cfg(any(feature = "std", feature = "indexmap"))]
+#[cfg(any(feature = "std", feature = "indexmap", feature = "hashbrown"))]
 use std::hash::BuildHasherDefault;
 
 use collections::CollectionSet;
@@ -52,6 +52,16 @@ fn set_families_follow_the_set_contract() {
 
     #[cfg(feature = "std")]
     {
+        check_set::<HashSet<u8>>();
+
+        type CustomHashSet<T> = HashSet<T, BuildHasherDefault<DefaultHasher>>;
+        check_set::<CustomHashSet<u8>>();
+    }
+
+    #[cfg(feature = "hashbrown")]
+    {
+        use collections::hashbrown::HashSet;
+
         check_set::<HashSet<u8>>();
 
         type CustomHashSet<T> = HashSet<T, BuildHasherDefault<DefaultHasher>>;

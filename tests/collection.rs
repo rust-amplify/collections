@@ -1,9 +1,9 @@
-#[cfg(any(feature = "std", feature = "indexmap"))]
+#[cfg(any(feature = "std", feature = "indexmap", feature = "hashbrown"))]
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 #[cfg(feature = "std")]
 use std::collections::{HashMap, HashSet};
-#[cfg(any(feature = "std", feature = "indexmap"))]
+#[cfg(any(feature = "std", feature = "indexmap", feature = "hashbrown"))]
 use std::hash::BuildHasherDefault;
 
 use collections::Collection;
@@ -39,6 +39,19 @@ fn collection_implementations_follow_the_common_contract() {
 
     #[cfg(feature = "std")]
     {
+        check_collection::<HashSet<u8>>(&[1, 2]);
+        check_collection::<HashMap<u8, u8>>(&[(1, 10), (2, 20)]);
+
+        type CustomHashSet<T> = HashSet<T, BuildHasherDefault<DefaultHasher>>;
+        type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
+        check_collection::<CustomHashSet<u8>>(&[1, 2]);
+        check_collection::<CustomHashMap<u8, u8>>(&[(1, 10), (2, 20)]);
+    }
+
+    #[cfg(feature = "hashbrown")]
+    {
+        use collections::hashbrown::{HashMap, HashSet};
+
         check_collection::<HashSet<u8>>(&[1, 2]);
         check_collection::<HashMap<u8, u8>>(&[(1, 10), (2, 20)]);
 

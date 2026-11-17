@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 #[cfg(feature = "std")]
 use std::collections::HashMap;
-#[cfg(any(feature = "std", feature = "indexmap"))]
+#[cfg(any(feature = "std", feature = "indexmap", feature = "hashbrown"))]
 use std::collections::hash_map::DefaultHasher;
-#[cfg(any(feature = "std", feature = "indexmap"))]
+#[cfg(any(feature = "std", feature = "indexmap", feature = "hashbrown"))]
 use std::hash::BuildHasherDefault;
 
 use collections::{CollectionMap, MapEntry};
@@ -88,6 +88,16 @@ fn map_families_follow_the_keyed_contract() {
         check_keyed::<CustomHashMap<u8, String>>();
     }
 
+    #[cfg(feature = "hashbrown")]
+    {
+        use collections::hashbrown::HashMap;
+
+        check_keyed::<HashMap<u8, String>>();
+
+        type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
+        check_keyed::<CustomHashMap<u8, String>>();
+    }
+
     #[cfg(feature = "indexmap")]
     {
         use collections::indexmap::IndexMap;
@@ -106,6 +116,16 @@ fn native_entry_operations_work_generically() {
 
     #[cfg(feature = "std")]
     {
+        check_entry_api::<HashMap<&'static str, usize>>();
+
+        type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
+        check_entry_api::<CustomHashMap<&'static str, usize>>();
+    }
+
+    #[cfg(feature = "hashbrown")]
+    {
+        use collections::hashbrown::HashMap;
+
         check_entry_api::<HashMap<&'static str, usize>>();
 
         type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;

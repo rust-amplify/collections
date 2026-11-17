@@ -36,6 +36,9 @@ pub extern crate alloc;
 #[cfg(feature = "ascii")]
 /// Re-export of the optional `ascii` dependency.
 pub extern crate ascii;
+#[cfg(feature = "hashbrown")]
+/// Re-export of the optional `hashbrown` dependency.
+pub extern crate hashbrown;
 #[cfg(feature = "indexmap")]
 /// Re-export of the optional `indexmap` dependency.
 pub extern crate indexmap;
@@ -46,6 +49,8 @@ mod btrees;
 mod heap;
 #[cfg(feature = "std")]
 mod hashed;
+#[cfg(feature = "hashbrown")]
+mod hashbrowns;
 #[cfg(feature = "ascii")]
 mod asciistr;
 #[cfg(feature = "indexmap")]

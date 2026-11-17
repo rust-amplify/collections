@@ -17,13 +17,14 @@ The crate contains:
 - four traits, [`Collection`](#collection), [`CollectionSet`](#collectionset),
   [`CollectionMap`](#collectionmap) and [`MapEntry`](#mapentry);
 - their implementations for the collections from `alloc` and `std`, and
-  optionally for the types from the [`ascii`] and [`indexmap`] crates;
+  optionally for the types from the [`ascii`], [`hashbrown`] and [`indexmap`]
+  crates;
 - a few [convenience macros](#macros) for constructing collections, similar to
   `vec!`.
 
-It supports `no_std` environments (with `alloc`). The `ascii` and `indexmap`
-integrations are optional features, and the crate has no wasm-specific
-dependency.
+It supports `no_std` environments (with `alloc`). The `ascii`, `hashbrown` and
+`indexmap` integrations are optional features, and the crate has no
+wasm-specific dependency.
 
 ## Contents
 
@@ -92,7 +93,7 @@ Selecting features:
 
 ```toml
 [dependencies]
-# Everything: `std`, `ascii` and `indexmap`
+# Everything: `std`, `ascii`, `hashbrown` and `indexmap`
 collections = { git = "https://github.com/rust-amplify/collections", features = ["all"] }
 ```
 
@@ -109,11 +110,12 @@ collections = { git = "https://github.com/rust-amplify/collections", default-fea
 | `std`      |   yes   | Uses the standard library: adds implementations for `HashMap` and `HashSet`, and `map!`/`set!` macros.   |
 | `ascii`    |   no    | Adds the [`ascii`] dependency and implements `Collection` for `AsciiString`.                             |
 | `indexmap` |   no    | Adds the [`indexmap`] dependency and implements the traits for `IndexMap` and `IndexSet`.                |
-| `all`      |   no    | Shortcut for `std` + `ascii` + `indexmap`.                                                               |
+| `hashbrown`|   no    | Adds the [`hashbrown`] dependency and implements the collection traits for its hash maps and sets.        |
+| `all`      |   no    | Shortcut for `std` + `ascii` + `hashbrown` + `indexmap`.                                                  |
 
 When the optional dependencies are enabled, they are re-exported as
-`collections::ascii` and `collections::indexmap`; the `alloc` crate is always
-re-exported as `collections::alloc`.
+`collections::ascii`, `collections::hashbrown` and `collections::indexmap`; the
+`alloc` crate is always re-exported as `collections::alloc`.
 
 ## Traits
 
@@ -370,6 +372,8 @@ assert_eq!(stock, BTreeMap::from([("apples", 15), ("pears", 0), ("plums", 1)]));
 | `BTreeMap<K, V>` | `K: Ord`                                | `(K, V)`    |     yes      |                |       yes       |                  |
 | `HashSet<T, S>`  | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |      yes       |                 | `std`            |
 | `HashMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes |                |       yes       | `std`            |
+| `hashbrown::HashSet<T, S>` | `T: Eq + Hash`, `S: BuildHasher + Default` | `T` | yes | yes | | `hashbrown` |
+| `hashbrown::HashMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes | | yes | `hashbrown` |
 | `AsciiString`    |                                         | `AsciiChar` |     yes      |                |                 | `ascii`          |
 | `IndexSet<T, S>` | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |      yes       |                 | `indexmap`       |
 | `IndexMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes |                |       yes       | `indexmap`       |
@@ -491,6 +495,7 @@ src/
 ├── heap.rs         `BinaryHeap`
 ├── btrees.rs       `BTreeSet` and `BTreeMap`
 ├── hashed.rs       `HashSet` and `HashMap` (`std`)
+├── hashbrowns.rs   `hashbrown::HashSet` and `hashbrown::HashMap` (`hashbrown`)
 ├── asciistr.rs     `AsciiString` (`ascii`)
 ├── indexed.rs      `IndexSet` and `IndexMap` (`indexmap`)
 └── macros.rs       collection construction macros
@@ -543,4 +548,5 @@ The library is distributed under the [Apache 2.0 license](./LICENSE).
 
 [`amplify`]: https://github.com/rust-amplify/rust-amplify
 [`ascii`]: https://crates.io/crates/ascii
+[`hashbrown`]: https://crates.io/crates/hashbrown
 [`indexmap`]: https://crates.io/crates/indexmap
