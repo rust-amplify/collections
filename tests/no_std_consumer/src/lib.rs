@@ -1,6 +1,6 @@
 #![no_std]
 
-use collections::{bmap, bset, list, map, s, set};
+use collections::{bmap, bset, deque, heap, list, map, s, set};
 
 pub fn invoke_all_macros() {
     let _: collections::alloc::string::String = s!("text");
@@ -18,6 +18,14 @@ pub fn invoke_all_macros() {
     let _: collections::alloc::collections::LinkedList<u8> = list! { 1 => 2 };
     let _: collections::alloc::collections::LinkedList<collections::alloc::string::String> =
         list! { owned: "one" => "two" };
+    let _: collections::alloc::collections::VecDeque<u8> = deque! {};
+    let _: collections::alloc::collections::VecDeque<u8> = deque! { 1 => 2 };
+    let _: collections::alloc::collections::VecDeque<collections::alloc::string::String> =
+        deque! { owned: "one" => "two" };
+    let _: collections::alloc::collections::BinaryHeap<u8> = heap![];
+    let _: collections::alloc::collections::BinaryHeap<u8> = heap![1, 2];
+    let _: collections::alloc::collections::BinaryHeap<collections::alloc::string::String> =
+        heap! { owned: "one", "two" };
     let _: collections::std::collections::HashMap<u8, u8> = map! {};
     let _: collections::std::collections::HashMap<u8, u8> = map! { 1 => 2 };
     let _: collections::std::collections::HashMap<

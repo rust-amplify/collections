@@ -402,15 +402,17 @@ The `alloc` macros are always present; `map!` and `set!` require `std`.
 | `bmap! { key => value, ... }` | `BTreeMap`            | always                 |
 | `bset![value, ...]`          | `BTreeSet`             | always                 |
 | `list! { value => value => ... }` | `LinkedList`      | always                 |
+| `deque! { value => value => ... }` | `VecDeque`        | always                 |
+| `heap![value, ...]`            | `BinaryHeap`           | always                 |
 
 Each collection macro has three forms: an empty one, a list of expressions,
 and a list prefixed with `owned:`, which calls `to_owned()` on each of the keys
 and values:
 
 ```rust
-use std::collections::{HashMap, HashSet};
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
-use collections::{map, s, set};
+use collections::{deque, heap, map, s, set};
 
 let map = map! {
     s!("key") => 5,
@@ -427,22 +429,32 @@ assert_eq!(set![1, 2, 3, 1], set![1, 2, 3]);
 
 let empty: HashSet<u8> = set![];
 assert!(empty.is_empty());
+
+let deque: VecDeque<_> = deque! { "first" => "second" };
+assert_eq!(deque.front(), Some(&"first"));
+
+let heap: BinaryHeap<_> = heap![1, 3, 2];
+assert_eq!(heap.peek(), Some(&3));
 ```
 
 The `alloc` macros also work when `collections` is used without its `std`
 feature (`default-features = false`):
 
 ```rust
-use collections::{bmap, bset, list, s};
+use collections::{bmap, bset, deque, heap, list, s};
 
 let text = s!("a string");
 let map = bmap! { "key" => 5, "other_key" => 10 };
 let set = bset![5, 6, 7];
 let list = list! { "item one" => "item two" => "item three" };
+let deque = deque! { "item one" => "item two" => "item three" };
+let heap = heap![3, 1, 2];
 assert_eq!(text, "a string");
 assert_eq!(map.len(), 2);
 assert_eq!(set.len(), 3);
 assert_eq!(list.len(), 3);
+assert_eq!(deque.len(), 3);
+assert_eq!(heap.peek(), Some(&3));
 ```
 
 The macros may also be imported in the old style, with

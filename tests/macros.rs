@@ -1,6 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet, LinkedList};
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
-use collections::{bmap, bset, list, s};
+use collections::{bmap, bset, deque, heap, list, s};
 
 #[test]
 fn string_macro_creates_a_string() {
@@ -35,6 +35,24 @@ fn alloc_macros_support_empty_plain_and_owned_forms() {
 
     let owned_list: LinkedList<String> = list! { owned: "first" => "second" };
     assert_eq!(owned_list.front().unwrap(), "first");
+
+    let empty_deque: VecDeque<u8> = deque! {};
+    assert!(empty_deque.is_empty());
+
+    let deque = deque! { "first" => "second" };
+    assert_eq!(deque.front(), Some(&"first"));
+
+    let owned_deque: VecDeque<String> = deque! { owned: "first" => "second" };
+    assert_eq!(owned_deque.front().unwrap(), "first");
+
+    let empty_heap: BinaryHeap<u8> = heap![];
+    assert!(empty_heap.is_empty());
+
+    let heap = heap![1, 3, 2];
+    assert_eq!(heap.peek(), Some(&3));
+
+    let owned_heap: BinaryHeap<String> = heap! { owned: "first", "second" };
+    assert_eq!(owned_heap.peek().unwrap(), "second");
 }
 
 #[cfg(feature = "std")]

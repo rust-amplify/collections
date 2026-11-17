@@ -135,6 +135,73 @@ macro_rules! list {
     }};
 }
 
+/// Creates an allocated `VecDeque` from values, appending each value to the
+/// back of the deque.
+///
+/// The `owned:` form calls `to_owned()` on each value.
+///
+/// ```
+/// use collections::deque;
+///
+/// let items = deque! { "first" => "second" };
+/// assert_eq!(items.front(), Some(&"first"));
+/// let owned = deque! { owned: "first" => "second" };
+/// assert_eq!(owned.front().unwrap(), "first");
+/// ```
+#[macro_export]
+macro_rules! deque {
+    {} => {
+        $crate::alloc::collections::VecDeque::new()
+    };
+
+    { owned: $($value:expr_2021)=>+ } => {{
+        use $crate::alloc::borrow::ToOwned as _;
+
+        let mut deque = $crate::alloc::collections::VecDeque::new();
+        $(deque.push_back($value.to_owned());)+
+        deque
+    }};
+
+    { $($value:expr_2021)=>+ } => {{
+        let mut deque = $crate::alloc::collections::VecDeque::new();
+        $(deque.push_back($value);)+
+        deque
+    }};
+}
+
+/// Creates an allocated `BinaryHeap` from values.
+///
+/// The `owned:` form calls `to_owned()` on each value.
+///
+/// ```
+/// use collections::heap;
+///
+/// let items = heap![1, 3, 2];
+/// assert_eq!(items.peek(), Some(&3));
+/// let owned = heap! { owned: "first", "second" };
+/// assert_eq!(owned.peek().unwrap(), "second");
+/// ```
+#[macro_export]
+macro_rules! heap {
+    {} => {
+        $crate::alloc::collections::BinaryHeap::new()
+    };
+
+    { owned: $($value:expr_2021),+ $(,)? } => {{
+        use $crate::alloc::borrow::ToOwned as _;
+
+        let mut heap = $crate::alloc::collections::BinaryHeap::new();
+        $(heap.push($value.to_owned());)+
+        heap
+    }};
+
+    { $($value:expr_2021),+ $(,)? } => {{
+        let mut heap = $crate::alloc::collections::BinaryHeap::new();
+        $(heap.push($value);)+
+        heap
+    }};
+}
+
 /// Creates a `HashMap` from key-value pairs. Available with the `std` feature.
 ///
 /// The `owned:` form calls `to_owned()` on each key and value.

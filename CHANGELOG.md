@@ -9,6 +9,7 @@ Change Log
   `CollectionMap`.
 - `CollectionSet` for common set operations on `BTreeSet`, `HashSet` and
   `IndexSet`.
+- `deque!` and `heap!` macros for constructing `VecDeque` and `BinaryHeap`.
 - `Collection` implementations for `LinkedList` and `BinaryHeap`.
 - Generic contract tests for supported collection types and macros.
 
