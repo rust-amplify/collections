@@ -56,7 +56,7 @@ pub trait Collection: FromIterator<Self::Item> + Extend<Self::Item> {
 }
 
 /// Trait implemented by key-value maps.
-pub trait KeyedCollection: Collection<Item = (Self::Key, Self::Value)> {
+pub trait CollectionMap: Collection<Item = (Self::Key, Self::Value)> {
     /// Key type for the collection.
     type Key;
     /// Value type for the collection.
@@ -112,6 +112,34 @@ pub trait KeyedCollection: Collection<Item = (Self::Key, Self::Value)> {
     /// returns `false`. The elements are visited in unsorted (and
     /// unspecified) order.
     fn retain(&mut self, f: impl FnMut(&Self::Key, &mut Self::Value) -> bool);
+}
+
+/// Trait implemented by set collections.
+pub trait CollectionSet: Collection {
+    /// Checks whether an equal item is present in the set.
+    fn contains(&self, item: &Self::Item) -> bool;
+
+    /// Returns a reference to the stored item equal to the given item.
+    fn get(&self, item: &Self::Item) -> Option<&Self::Item>;
+
+    /// Returns an iterator over the set's items.
+    fn iter(&self) -> impl Iterator<Item = &Self::Item>;
+
+    /// Inserts an item, returning whether the set did not already contain it.
+    fn insert(&mut self, item: Self::Item) -> bool;
+
+    /// Inserts an item or replaces an equal one, returning the previous item if
+    /// any.
+    fn replace(&mut self, item: Self::Item) -> Option<Self::Item>;
+
+    /// Removes an equal item, returning whether it was present.
+    fn remove(&mut self, item: &Self::Item) -> bool;
+
+    /// Removes an equal item and returns the stored item if present.
+    fn take(&mut self, item: &Self::Item) -> Option<Self::Item>;
+
+    /// Retains only the items specified by the predicate.
+    fn retain(&mut self, f: impl FnMut(&Self::Item) -> bool);
 }
 
 /// Common interface over the native entry types of maps.

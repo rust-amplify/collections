@@ -22,9 +22,9 @@
 //! Generic traits for working with collection types from `alloc` and `std`.
 //!
 //! [`Collection`] provides a common interface for sequences, sets, maps and
-//! heaps. [`KeyedCollection`] adds map operations, including access to each
-//! collection's native entry type through [`MapEntry`]. The crate works in
-//! `no_std` environments when an allocator is available.
+//! heaps. [`CollectionSet`] and [`CollectionMap`] add set and map operations;
+//! maps also expose their native entry type through [`MapEntry`]. The crate
+//! works in `no_std` environments when an allocator is available.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -57,7 +57,7 @@ mod macros;
 #[doc(hidden)]
 pub extern crate std;
 
-pub use traits::{Collection, KeyedCollection, MapEntry};
+pub use traits::{Collection, CollectionMap, CollectionSet, MapEntry};
 
 #[cfg(all(doctest, feature = "std"))]
 #[doc(hidden)]

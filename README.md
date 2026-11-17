@@ -14,9 +14,8 @@ generic code can be written once and work with a `Vec`, a `HashSet`, a
 
 The crate contains:
 
-- three traits, [`Collection`](#collection),
-  [`KeyedCollection`](#keyedcollection) and
-  [`MapEntry`](#mapentry);
+- four traits, [`Collection`](#collection), [`CollectionSet`](#collectionset),
+  [`CollectionMap`](#collectionmap) and [`MapEntry`](#mapentry);
 - their implementations for the collections from `alloc` and `std`, and
   optionally for the types from the [`ascii`] and [`indexmap`] crates;
 - a few [convenience macros](#macros) for constructing collections, similar to
@@ -163,9 +162,47 @@ let set: BTreeSet<u8> = collect_twice([1, 2]);
 assert_eq!(set.len(), 2);
 ```
 
-### `KeyedCollection`
+### `CollectionSet`
 
-`KeyedCollection` extends `Collection` for key-value maps. It is a
+`CollectionSet` extends `Collection` with common set operations. Items are
+unique according to the collection's equality or ordering rules.
+
+| Item                                      | Description                                               |
+|-------------------------------------------|-----------------------------------------------------------|
+| `fn contains(&self, &Item) -> bool`       | Checks whether an equal item is present.                  |
+| `fn get(&self, &Item) -> Option<&Item>`   | Gets a reference to the stored item equal to the argument.|
+| `fn iter(&self)`                          | Iterates over the set's items.                            |
+| `fn insert(&mut self, Item) -> bool`      | Inserts an item, returning whether it was new.            |
+| `fn replace(&mut self, Item) -> Option<Item>` | Inserts or replaces an item, returning the previous equal item. |
+| `fn remove(&mut self, &Item) -> bool`     | Removes an equal item, returning whether it was present.  |
+| `fn take(&mut self, &Item) -> Option<Item>` | Removes and returns the stored item, if present.        |
+| `fn retain(&mut self, impl FnMut(&Item) -> bool)` | Keeps only items accepted by the predicate.       |
+
+The same generic function works with ordered, hashed and insertion-ordered
+sets:
+
+```rust
+use std::collections::{BTreeSet, HashSet};
+
+use collections::CollectionSet;
+
+fn unique<C: CollectionSet<Item = u8>>(items: impl IntoIterator<Item = u8>) -> C {
+    let mut set = C::with_capacity(16);
+    for item in items {
+        set.insert(item);
+    }
+    set
+}
+
+let ordered: BTreeSet<u8> = unique([3, 1, 2, 1]);
+let hashed: HashSet<u8> = unique([3, 1, 2, 1]);
+assert_eq!(ordered.len(), 3);
+assert!(hashed.contains(&2));
+```
+
+### `CollectionMap`
+
+`CollectionMap` extends `Collection` for key-value maps. It is a
 `Collection` with `Item = (Self::Key, Self::Value)`.
 
 | Item                                             | Description                                                          |
@@ -195,11 +232,11 @@ The same generic function can be used with different kinds of maps:
 ```rust
 use std::collections::{BTreeMap, HashMap};
 
-use collections::KeyedCollection;
+use collections::CollectionMap;
 
 /// Counts the words which are present in the text more than once.
 fn repeated_words<'a, M>(text: &'a str) -> M
-where M: KeyedCollection<Key = &'a str, Value = usize> {
+where M: CollectionMap<Key = &'a str, Value = usize> {
     let mut counts = M::with_capacity(16);
     for word in text.split_whitespace() {
         match counts.get_mut(&word) {
@@ -226,7 +263,7 @@ assert_eq!(ordered.into_iter().collect::<Vec<_>>(), [("fox", 2), ("the", 3)]);
 ### `MapEntry`
 
 `MapEntry` is the common interface of the entries returned by
-`KeyedCollection::entry`. An entry is a view into a single key of a map, which
+`CollectionMap::entry`. An entry is a view into a single key of a map, which
 is either occupied or vacant; it allows reading, inserting or updating the
 value with a single lookup. Each standard map has its own entry type, but there
 is no trait uniting them. `MapEntry` is that trait, so the entry API can be used
@@ -247,9 +284,9 @@ mutable borrow of the map taken by `entry`. The `or_*` methods consume the entry
 and return a reference which lives as long as that borrow.
 
 `MapEntry` is implemented for the native entry types of the supported maps,
-which are the types returned by `KeyedCollection::entry`:
+which are the types returned by `CollectionMap::entry`:
 
-| Map                 | `KeyedCollection::Entry<'a>`     | Required feature |
+| Map                 | `CollectionMap::Entry<'a>`       | Required feature |
 |---------------------|----------------------------------|------------------|
 | `BTreeMap<K, V>`    | `btree_map::Entry<'a, K, V>`     |                  |
 | `HashMap<K, V, S>`  | `hash_map::Entry<'a, K, V>`      | `std`            |
@@ -268,11 +305,11 @@ The function below counts words with one lookup per word, while
 ```rust
 use std::collections::{BTreeMap, HashMap};
 
-use collections::{KeyedCollection, MapEntry};
+use collections::{CollectionMap, MapEntry};
 
 /// Counts how many times each word occurs in the text.
 fn word_counts<'a, M>(text: &'a str) -> M
-where M: KeyedCollection<Key = &'a str, Value = usize> {
+where M: CollectionMap<Key = &'a str, Value = usize> {
     let mut counts = M::with_capacity(16);
     for word in text.split_whitespace() {
         *counts.entry(word).or_insert(0) += 1;
@@ -295,10 +332,10 @@ All the methods in one place:
 ```rust
 use std::collections::BTreeMap;
 
-use collections::{KeyedCollection, MapEntry};
+use collections::{CollectionMap, MapEntry};
 
 fn update<M>(stock: &mut M)
-where M: KeyedCollection<Key = &'static str, Value = u32> {
+where M: CollectionMap<Key = &'static str, Value = u32> {
     // `key` returns the key the entry was requested for
     assert_eq!(*stock.entry("apples").key(), "apples");
 
@@ -322,20 +359,20 @@ assert_eq!(stock, BTreeMap::from([("apples", 15), ("pears", 0), ("plums", 1)]));
 
 ## Supported collection types
 
-| Type             | Bounds                                  | `Item`      | `Collection` | `KeyedCollection` | Required feature |
-|------------------|-----------------------------------------|-------------|:------------:|:-----------------:|------------------|
-| `String`         |                                         | `char`      |     yes      |                   |                  |
-| `Vec<T>`         |                                         | `T`         |     yes      |                   |                  |
-| `VecDeque<T>`    |                                         | `T`         |     yes      |                   |                  |
-| `LinkedList<T>`  |                                         | `T`         |     yes      |                   |                  |
-| `BinaryHeap<T>`  | `T: Ord`                                | `T`         |     yes      |                   |                  |
-| `BTreeSet<T>`    | `T: Ord`                                | `T`         |     yes      |                   |                  |
-| `BTreeMap<K, V>` | `K: Ord`                                | `(K, V)`    |     yes      |        yes        |                  |
-| `HashSet<T, S>`  | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |                   | `std`            |
-| `HashMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes       |        yes        | `std`            |
-| `AsciiString`    |                                         | `AsciiChar` |     yes      |                   | `ascii`          |
-| `IndexSet<T, S>` | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |                   | `indexmap`       |
-| `IndexMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes     |        yes        | `indexmap`       |
+| Type             | Bounds                                  | `Item`      | `Collection` | `CollectionSet` | `CollectionMap` | Required feature |
+|------------------|-----------------------------------------|-------------|:------------:|:--------------:|:---------------:|------------------|
+| `String`         |                                         | `char`      |     yes      |                |                 |                  |
+| `Vec<T>`         |                                         | `T`         |     yes      |                |                 |                  |
+| `VecDeque<T>`    |                                         | `T`         |     yes      |                |                 |                  |
+| `LinkedList<T>`  |                                         | `T`         |     yes      |                |                 |                  |
+| `BinaryHeap<T>`  | `T: Ord`                                | `T`         |     yes      |                |                 |                  |
+| `BTreeSet<T>`    | `T: Ord`                                | `T`         |     yes      |      yes       |                 |                  |
+| `BTreeMap<K, V>` | `K: Ord`                                | `(K, V)`    |     yes      |                |       yes       |                  |
+| `HashSet<T, S>`  | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |      yes       |                 | `std`            |
+| `HashMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes |                |       yes       | `std`            |
+| `AsciiString`    |                                         | `AsciiChar` |     yes      |                |                 | `ascii`          |
+| `IndexSet<T, S>` | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |      yes       |                 | `indexmap`       |
+| `IndexMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes |                |       yes       | `indexmap`       |
 
 Implementation details worth knowing:
 
@@ -415,13 +452,13 @@ The macros may also be imported in the old style, with
 
 - `String::len()` reports UTF-8 bytes, not the number of `char` items; this
   matches the standard `String` API.
-- `KeyedCollection` uses the map's concrete key type for lookups, so it does not
+- `CollectionMap` uses the map's concrete key type for lookups, so it does not
   provide generic borrowed-key lookup such as `&str` for a `String` key.
 - With `indexmap` and without `std`, the dependency has no default hasher type;
   specify the hasher parameter explicitly. It must implement `BuildHasher + Default`.
 - The traits intentionally expose only common collection operations; APIs such
-  as indexed sequence access, set membership and heap priority operations stay
-  on the native collection types.
+  as indexed sequence access, set algebra and heap priority operations stay on
+  the native collection types.
 
 ## Minimum supported Rust version
 
@@ -437,7 +474,7 @@ Linux, macOS and Windows (both x86-64 and ARM), and for the
 ```text
 src/
 ├── lib.rs          crate root, feature gates and re-exports
-├── traits.rs       `Collection`, `KeyedCollection` and `MapEntry`
+├── traits.rs       `Collection`, `CollectionSet`, `CollectionMap` and `MapEntry`
 ├── linear.rs       `String`, `Vec`, `VecDeque` and `LinkedList`
 ├── heap.rs         `BinaryHeap`
 ├── btrees.rs       `BTreeSet` and `BTreeMap`
@@ -449,6 +486,7 @@ src/
 tests/
 ├── collection.rs   `Collection` implementations and behavior
 ├── keyed.rs        map APIs, entry methods and key bounds
+├── set.rs          set APIs and set ordering behavior
 ├── macros.rs       macro forms
 └── no_std_consumer/ a `#![no_std]` downstream macro consumer
 ```

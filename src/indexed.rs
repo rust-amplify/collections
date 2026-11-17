@@ -23,7 +23,7 @@ use core::hash::{BuildHasher, Hash};
 
 use indexmap::{IndexMap, IndexSet, map};
 
-use super::{Collection, KeyedCollection, MapEntry};
+use super::{Collection, CollectionMap, CollectionSet, MapEntry};
 
 impl<T: Eq + Hash, S: BuildHasher + Default> Collection for IndexSet<T, S> {
     type Item = T;
@@ -42,6 +42,40 @@ impl<T: Eq + Hash, S: BuildHasher + Default> Collection for IndexSet<T, S> {
 
     fn clear(&mut self) {
         IndexSet::clear(self)
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for IndexSet<T, S> {
+    fn contains(&self, item: &Self::Item) -> bool {
+        IndexSet::contains(self, item)
+    }
+
+    fn get(&self, item: &Self::Item) -> Option<&Self::Item> {
+        IndexSet::get(self, item)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &Self::Item> {
+        IndexSet::iter(self)
+    }
+
+    fn insert(&mut self, item: Self::Item) -> bool {
+        IndexSet::insert(self, item)
+    }
+
+    fn replace(&mut self, item: Self::Item) -> Option<Self::Item> {
+        IndexSet::replace(self, item)
+    }
+
+    fn remove(&mut self, item: &Self::Item) -> bool {
+        IndexSet::shift_remove(self, item)
+    }
+
+    fn take(&mut self, item: &Self::Item) -> Option<Self::Item> {
+        IndexSet::shift_take(self, item)
+    }
+
+    fn retain(&mut self, f: impl FnMut(&Self::Item) -> bool) {
+        IndexSet::retain(self, f)
     }
 }
 
@@ -65,7 +99,7 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for IndexMap<K, V, S>
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> KeyedCollection for IndexMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for IndexMap<K, V, S> {
     type Key = K;
     type Value = V;
     type Entry<'a>

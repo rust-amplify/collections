@@ -6,9 +6,9 @@ use std::collections::hash_map::DefaultHasher;
 #[cfg(any(feature = "std", feature = "indexmap"))]
 use std::hash::BuildHasherDefault;
 
-use collections::{KeyedCollection, MapEntry};
+use collections::{CollectionMap, MapEntry};
 
-fn check_keyed<C: KeyedCollection<Key = u8, Value = String>>() {
+fn check_keyed<C: CollectionMap<Key = u8, Value = String>>() {
     let mut map = C::with_capacity(3);
     assert!(map.is_empty());
 
@@ -46,7 +46,7 @@ fn check_keyed<C: KeyedCollection<Key = u8, Value = String>>() {
     assert_eq!(map.remove(&99), None);
 }
 
-fn check_entry_api<M: KeyedCollection<Key = &'static str, Value = usize>>() {
+fn check_entry_api<M: CollectionMap<Key = &'static str, Value = usize>>() {
     let mut map = M::with_capacity(4);
     for word in ["map", "entry", "map"] {
         *map.entry(word).or_insert(0) += 1;
@@ -68,7 +68,7 @@ fn check_entry_api<M: KeyedCollection<Key = &'static str, Value = usize>>() {
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct OrdOnly(u8);
 
-fn check_ord_only_key<M: KeyedCollection<Key = OrdOnly, Value = u8>>() {
+fn check_ord_only_key<M: CollectionMap<Key = OrdOnly, Value = u8>>() {
     let mut map = M::with_capacity(1);
     assert_eq!(map.insert(OrdOnly(1), 10), None);
     assert_eq!(map.get(&OrdOnly(1)), Some(&10));
@@ -141,6 +141,6 @@ fn indexmap_removal_preserves_the_order_of_remaining_entries() {
     map.insert(2, 20);
     map.insert(3, 30);
 
-    assert_eq!(KeyedCollection::remove(&mut map, &2), Some(20));
+    assert_eq!(CollectionMap::remove(&mut map, &2), Some(20));
     assert_eq!(map.keys().copied().collect::<Vec<_>>(), [1, 3]);
 }

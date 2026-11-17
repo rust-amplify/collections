@@ -6,12 +6,15 @@ Change Log
 ### Added
 
 - `MapEntry` for generic map entry operations, plus `keys()` and `values()` on
-  `KeyedCollection`.
+  `CollectionMap`.
+- `CollectionSet` for common set operations on `BTreeSet`, `HashSet` and
+  `IndexSet`.
 - `Collection` implementations for `LinkedList` and `BinaryHeap`.
 - Generic contract tests for supported collection types and macros.
 
 ### Changed
 
+- Renamed `KeyedCollection` to `CollectionMap`.
 - The crate now uses Rust edition 2024 and requires Rust 1.85.0 or later.
 - Hash-based and index-based collection implementations now accept any hasher
   that implements `BuildHasher + Default`.

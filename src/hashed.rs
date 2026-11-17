@@ -22,7 +22,7 @@
 use std::collections::{HashMap, HashSet, hash_map};
 use std::hash::{BuildHasher, Hash};
 
-use super::{Collection, KeyedCollection, MapEntry};
+use super::{Collection, CollectionMap, CollectionSet, MapEntry};
 
 impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
     type Item = T;
@@ -41,6 +41,40 @@ impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
 
     fn clear(&mut self) {
         HashSet::clear(self)
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for HashSet<T, S> {
+    fn contains(&self, item: &Self::Item) -> bool {
+        HashSet::contains(self, item)
+    }
+
+    fn get(&self, item: &Self::Item) -> Option<&Self::Item> {
+        HashSet::get(self, item)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &Self::Item> {
+        HashSet::iter(self)
+    }
+
+    fn insert(&mut self, item: Self::Item) -> bool {
+        HashSet::insert(self, item)
+    }
+
+    fn replace(&mut self, item: Self::Item) -> Option<Self::Item> {
+        HashSet::replace(self, item)
+    }
+
+    fn remove(&mut self, item: &Self::Item) -> bool {
+        HashSet::remove(self, item)
+    }
+
+    fn take(&mut self, item: &Self::Item) -> Option<Self::Item> {
+        HashSet::take(self, item)
+    }
+
+    fn retain(&mut self, f: impl FnMut(&Self::Item) -> bool) {
+        HashSet::retain(self, f)
     }
 }
 
@@ -64,7 +98,7 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> 
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> KeyedCollection for HashMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for HashMap<K, V, S> {
     type Key = K;
     type Value = V;
     type Entry<'a>

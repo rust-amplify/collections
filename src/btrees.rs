@@ -21,7 +21,7 @@
 
 use alloc::collections::{BTreeMap, BTreeSet, btree_map};
 
-use super::{Collection, KeyedCollection, MapEntry};
+use super::{Collection, CollectionMap, CollectionSet, MapEntry};
 
 impl<T: Ord> Collection for BTreeSet<T> {
     type Item = T;
@@ -41,6 +41,40 @@ impl<T: Ord> Collection for BTreeSet<T> {
 
     fn clear(&mut self) {
         BTreeSet::clear(self)
+    }
+}
+
+impl<T: Ord> CollectionSet for BTreeSet<T> {
+    fn contains(&self, item: &Self::Item) -> bool {
+        BTreeSet::contains(self, item)
+    }
+
+    fn get(&self, item: &Self::Item) -> Option<&Self::Item> {
+        BTreeSet::get(self, item)
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &Self::Item> {
+        BTreeSet::iter(self)
+    }
+
+    fn insert(&mut self, item: Self::Item) -> bool {
+        BTreeSet::insert(self, item)
+    }
+
+    fn replace(&mut self, item: Self::Item) -> Option<Self::Item> {
+        BTreeSet::replace(self, item)
+    }
+
+    fn remove(&mut self, item: &Self::Item) -> bool {
+        BTreeSet::remove(self, item)
+    }
+
+    fn take(&mut self, item: &Self::Item) -> Option<Self::Item> {
+        BTreeSet::take(self, item)
+    }
+
+    fn retain(&mut self, f: impl FnMut(&Self::Item) -> bool) {
+        BTreeSet::retain(self, f)
     }
 }
 
@@ -65,7 +99,7 @@ impl<K: Ord, V> Collection for BTreeMap<K, V> {
     }
 }
 
-impl<K: Ord, V> KeyedCollection for BTreeMap<K, V> {
+impl<K: Ord, V> CollectionMap for BTreeMap<K, V> {
     type Key = K;
     type Value = V;
     type Entry<'a>
