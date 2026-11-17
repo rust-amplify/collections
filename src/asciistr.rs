@@ -20,24 +20,42 @@
 
 use ascii::{AsciiChar, AsciiString};
 
-use super::Collection;
+use super::{Collection, CollectionBase, CollectionBytes};
 
-impl Collection for AsciiString {
+impl CollectionBase for AsciiString {
     type Item = AsciiChar;
 
-    fn with_capacity(capacity: usize) -> Self {
-        AsciiString::with_capacity(capacity)
-    }
-
-    fn len(&self) -> usize {
+    #[inline]
+    fn item_count(&self) -> usize {
         AsciiString::len(self)
     }
 
+    #[inline]
     fn push(&mut self, elem: Self::Item) {
         AsciiString::push(self, elem)
     }
 
+    #[inline]
     fn clear(&mut self) {
         AsciiString::clear(self)
+    }
+}
+
+impl CollectionBytes for AsciiString {
+    #[inline]
+    fn byte_len(&self) -> usize {
+        AsciiString::len(self)
+    }
+
+    #[inline]
+    fn item_byte_len(_item: &Self::Item) -> usize {
+        1
+    }
+}
+
+impl Collection for AsciiString {
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self {
+        AsciiString::with_capacity(capacity)
     }
 }

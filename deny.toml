@@ -1,0 +1,34 @@
+# Configuration of `cargo deny check`, which CI runs on every push and pull
+# request and once a week (see `.github/workflows/audit.yml`).
+
+[graph]
+# The optional dependencies are a part of the audited dependency graph.
+all-features = true
+
+[advisories]
+# Every advisory of the RustSec database which affects a locked dependency is an
+# error, and so are yanked and unmaintained crates.
+yanked = "deny"
+unmaintained = "all"
+ignore = []
+
+[licenses]
+# The licences used by the crates in `Cargo.lock`. A dependency under any other
+# licence fails the check and has to be reviewed before it is added here.
+allow = ["Apache-2.0", "MIT", "Zlib"]
+confidence-threshold = 0.93
+
+[bans]
+# Two versions of one crate in the graph are an error. This is how a split of
+# `allocator-api2` into the versions used by this crate and by `hashbrown`
+# breaks the `hashbrown` feature, and this check reports such a split by name.
+multiple-versions = "deny"
+wildcards = "deny"
+highlight = "all"
+
+[sources]
+# Dependencies may come from crates.io only.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

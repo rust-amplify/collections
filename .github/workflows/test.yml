@@ -12,6 +12,9 @@ on:
       - develop
       - 'v[0-9]+.*'
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -23,11 +26,17 @@ jobs:
       matrix:
         os: [ ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-11-arm, windows-latest ]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
       - name: Default feature tests
         run: cargo test --workspace --locked --no-fail-fast
       - name: No default feature tests
         run: cargo test --workspace --locked --no-default-features --no-fail-fast
+      - name: Tests with `alloc` only
+        run: cargo test --workspace --locked --no-default-features --features alloc --no-fail-fast
+      - name: Tests with `heapless` only
+        run: cargo test --workspace --locked --no-default-features --features heapless --no-fail-fast
       - name: All feature tests
         run: cargo test --workspace --locked --all-features --no-fail-fast

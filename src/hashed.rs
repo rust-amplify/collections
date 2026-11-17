@@ -21,16 +21,15 @@
 use std::collections::{HashMap, HashSet, hash_map};
 use std::hash::{BuildHasher, Hash};
 
-use super::{Collection, CollectionMap, CollectionSet, MapEntry};
+use super::{
+    Collection, CollectionBase, CollectionCapacity, CollectionEntry, CollectionMap, CollectionSet,
+    MapEntry,
+};
 
-impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher> CollectionBase for HashSet<T, S> {
     type Item = T;
 
-    fn with_capacity(capacity: usize) -> Self {
-        HashSet::with_capacity_and_hasher(capacity, S::default())
-    }
-
-    fn len(&self) -> usize {
+    fn item_count(&self) -> usize {
         HashSet::len(self)
     }
 
@@ -43,7 +42,13 @@ impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for HashSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
+    fn with_capacity(capacity: usize) -> Self {
+        HashSet::with_capacity_and_hasher(capacity, S::default())
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher> CollectionSet for HashSet<T, S> {
     fn contains(&self, item: &Self::Item) -> bool {
         HashSet::contains(self, item)
     }
@@ -77,14 +82,26 @@ impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for HashSet<T, S> {
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> {
-    type Item = (K, V);
+impl<T: Eq + Hash, S: BuildHasher> CollectionCapacity for HashSet<T, S> {
+    type ReserveError = std::collections::TryReserveError;
 
-    fn with_capacity(capacity: usize) -> Self {
-        HashMap::with_capacity_and_hasher(capacity, S::default())
+    fn capacity(&self) -> usize {
+        HashSet::capacity(self)
     }
 
-    fn len(&self) -> usize {
+    fn reserve(&mut self, additional: usize) {
+        HashSet::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        HashSet::try_reserve(self, additional)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionBase for HashMap<K, V, S> {
+    type Item = (K, V);
+
+    fn item_count(&self) -> usize {
         HashMap::len(self)
     }
 
@@ -97,15 +114,15 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> 
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for HashMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> {
+    fn with_capacity(capacity: usize) -> Self {
+        HashMap::with_capacity_and_hasher(capacity, S::default())
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionMap for HashMap<K, V, S> {
     type Key = K;
     type Value = V;
-    type Entry<'a>
-        = hash_map::Entry<'a, K, V>
-    where
-        K: 'a,
-        V: 'a,
-        S: 'a;
 
     fn contains_key(&self, key: &Self::Key) -> bool {
         HashMap::contains_key(self, key)
@@ -147,12 +164,37 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for HashMap<K, V, 
         HashMap::remove(self, key)
     }
 
-    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
-        HashMap::entry(self, key)
-    }
-
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         HashMap::retain(self, f)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionCapacity for HashMap<K, V, S> {
+    type ReserveError = std::collections::TryReserveError;
+
+    fn capacity(&self) -> usize {
+        HashMap::capacity(self)
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        HashMap::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        HashMap::try_reserve(self, additional)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionEntry for HashMap<K, V, S> {
+    type Entry<'a>
+        = hash_map::Entry<'a, K, V>
+    where
+        K: 'a,
+        V: 'a,
+        S: 'a;
+
+    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
+        HashMap::entry(self, key)
     }
 }
 

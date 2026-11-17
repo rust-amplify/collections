@@ -18,41 +18,88 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-use alloc::alloc::Allocator;
 use alloc::collections::{LinkedList, VecDeque};
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::alloc::Allocator;
 
-use super::{Collection, CollectionAlloc};
+use super::{Collection, CollectionAlloc, CollectionBase, CollectionBytes, CollectionCapacity};
 
-impl Collection for String {
+impl CollectionBase for String {
     type Item = char;
 
-    fn with_capacity(capacity: usize) -> Self {
-        String::with_capacity(capacity)
+    #[inline]
+    fn item_count(&self) -> usize {
+        self.chars().count()
     }
 
-    fn len(&self) -> usize {
-        String::len(self)
+    #[inline]
+    fn is_empty(&self) -> bool {
+        String::is_empty(self)
     }
 
+    #[inline]
     fn push(&mut self, elem: Self::Item) {
         String::push(self, elem)
     }
 
+    #[inline]
     fn clear(&mut self) {
         String::clear(self)
     }
 }
 
-impl<T> Collection for Vec<T> {
-    type Item = T;
-
-    fn with_capacity(capacity: usize) -> Self {
-        Vec::with_capacity(capacity)
+impl CollectionBytes for String {
+    #[inline]
+    fn byte_len(&self) -> usize {
+        String::len(self)
     }
 
-    fn len(&self) -> usize {
+    #[inline]
+    fn item_byte_len(item: &Self::Item) -> usize {
+        item.len_utf8()
+    }
+}
+
+impl Collection for String {
+    #[inline]
+    fn with_capacity(capacity: usize) -> Self {
+        String::with_capacity(capacity)
+    }
+}
+
+impl CollectionCapacity for String {
+    type ReserveError = alloc::collections::TryReserveError;
+
+    #[inline]
+    fn capacity(&self) -> usize {
+        String::capacity(self)
+    }
+
+    #[inline]
+    fn reserve(&mut self, additional: usize) {
+        String::reserve(self, additional)
+    }
+
+    #[inline]
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        String::try_reserve(self, additional)
+    }
+
+    #[inline]
+    fn try_push(&mut self, elem: Self::Item) -> Result<(), Self::Item> {
+        if String::try_reserve(self, elem.len_utf8()).is_err() {
+            return Err(elem);
+        }
+        String::push(self, elem);
+        Ok(())
+    }
+}
+
+impl<T, A: Allocator> CollectionBase for Vec<T, A> {
+    type Item = T;
+
+    fn item_count(&self) -> usize {
         Vec::len(self)
     }
 
@@ -65,8 +112,13 @@ impl<T> Collection for Vec<T> {
     }
 }
 
+impl<T> Collection for Vec<T> {
+    fn with_capacity(capacity: usize) -> Self {
+        Vec::with_capacity(capacity)
+    }
+}
+
 impl<T, A: Allocator> CollectionAlloc for Vec<T, A> {
-    type Item = T;
     type Allocator = A;
 
     fn with_capacity_in(capacity: usize, allocator: Self::Allocator) -> Self {
@@ -76,28 +128,38 @@ impl<T, A: Allocator> CollectionAlloc for Vec<T, A> {
     fn allocator(&self) -> &Self::Allocator {
         Vec::allocator(self)
     }
+}
 
-    fn len(&self) -> usize {
-        Vec::len(self)
+impl<T, A: Allocator> CollectionCapacity for Vec<T, A> {
+    type ReserveError = alloc::collections::TryReserveError;
+
+    fn capacity(&self) -> usize {
+        Vec::capacity(self)
     }
 
-    fn push(&mut self, elem: Self::Item) {
-        Vec::push(self, elem)
+    fn reserve(&mut self, additional: usize) {
+        Vec::reserve(self, additional)
     }
 
-    fn clear(&mut self) {
-        Vec::clear(self)
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        Vec::try_reserve(self, additional)
     }
 }
 
-impl<T> Collection for VecDeque<T> {
-    type Item = T;
-
-    fn with_capacity(capacity: usize) -> Self {
-        VecDeque::with_capacity(capacity)
+impl<A: Allocator> CollectionBytes for Vec<u8, A> {
+    fn byte_len(&self) -> usize {
+        Vec::len(self)
     }
 
-    fn len(&self) -> usize {
+    fn item_byte_len(_item: &Self::Item) -> usize {
+        1
+    }
+}
+
+impl<T> CollectionBase for VecDeque<T> {
+    type Item = T;
+
+    fn item_count(&self) -> usize {
         VecDeque::len(self)
     }
 
@@ -110,14 +172,32 @@ impl<T> Collection for VecDeque<T> {
     }
 }
 
-impl<T> Collection for LinkedList<T> {
-    type Item = T;
+impl<T> Collection for VecDeque<T> {
+    fn with_capacity(capacity: usize) -> Self {
+        VecDeque::with_capacity(capacity)
+    }
+}
 
-    fn with_capacity(_capacity: usize) -> Self {
-        LinkedList::new()
+impl<T> CollectionCapacity for VecDeque<T> {
+    type ReserveError = alloc::collections::TryReserveError;
+
+    fn capacity(&self) -> usize {
+        VecDeque::capacity(self)
     }
 
-    fn len(&self) -> usize {
+    fn reserve(&mut self, additional: usize) {
+        VecDeque::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        VecDeque::try_reserve(self, additional)
+    }
+}
+
+impl<T> CollectionBase for LinkedList<T> {
+    type Item = T;
+
+    fn item_count(&self) -> usize {
         LinkedList::len(self)
     }
 
@@ -127,5 +207,11 @@ impl<T> Collection for LinkedList<T> {
 
     fn clear(&mut self) {
         LinkedList::clear(self)
+    }
+}
+
+impl<T> Collection for LinkedList<T> {
+    fn with_capacity(_capacity: usize) -> Self {
+        LinkedList::new()
     }
 }

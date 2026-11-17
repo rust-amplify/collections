@@ -12,35 +12,28 @@ on:
       - develop
       - 'v[0-9]+.*'
 
+# The jobs only read the repository. Actions are pinned to commit hashes, which
+# Dependabot keeps up to date (see `.github/dependabot.yml`).
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  default:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check --workspace --locked
-  no-default:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check --workspace --locked --no-default-features
   features:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature: [ std, ascii, indexmap, hashbrown, 'ascii,indexmap' ]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Feature ${{matrix.feature}}
-        run: cargo check --workspace --locked --no-default-features --features=${{matrix.feature}}
-      - name: Feature ${{matrix.feature}}
-        run: cargo check --workspace --locked --features=${{matrix.feature}}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        with:
+          tool: cargo-hack
+      # `default` and `all` are aliases of combinations which are checked anyway.
+      - name: Every feature combination
+        run: cargo hack check --locked --all-targets --feature-powerset --exclude-features default,all
   platforms:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -48,8 +41,10 @@ jobs:
       matrix:
         os: [ ubuntu-24.04-arm, ubuntu-latest, macos-15-intel, macos-latest, windows-11-arm, windows-latest ]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
       - name: Platform ${{matrix.os}}
         run: cargo check --workspace --locked --all-features # we skip test targets here to be sure that the main library can be built
   toolchains:
@@ -59,27 +54,108 @@ jobs:
       matrix:
         toolchain: [ nightly, beta, stable, 1.100.0 ]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
         with:
           toolchain: ${{matrix.toolchain}}
       - name: Toolchain ${{matrix.toolchain}}
         run: cargo +${{matrix.toolchain}} check --workspace --locked --all-targets --all-features
   targets:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The `ascii` crate needs `alloc::sync::Arc`, which is not available
+          # on the targets without atomic compare-and-swap.
+          - target: thumbv6m-none-eabi
+            optional: indexmap,hashbrown
+          - target: thumbv7em-none-eabi
+            optional: ascii,indexmap,hashbrown
+          - target: riscv32imc-unknown-none-elf
+            optional: indexmap,hashbrown
+          - target: wasm32-unknown-unknown
+            optional: ascii,indexmap,hashbrown
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
         with:
-          targets: thumbv7em-none-eabi,wasm32-unknown-unknown
-      - name: Bare-metal no-std build
-        run: cargo check --locked --target thumbv7em-none-eabi --no-default-features
-      - name: WebAssembly build
-        run: cargo check --locked --target wasm32-unknown-unknown --all-features
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Traits only
+        run: cargo check --locked --target ${{ matrix.target }} --no-default-features
+      - name: Fixed-capacity collections
+        run: cargo check --locked --target ${{ matrix.target }} --no-default-features --features heapless
+      - name: Collections of `alloc`
+        run: cargo check --locked --target ${{ matrix.target }} --no-default-features --features alloc
+      - name: Optional families
+        run: cargo check --locked --target ${{ matrix.target }} --no-default-features --features heapless,${{ matrix.optional }}
   no-std-consumer:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
       - name: Check no-std macro consumer
         run: cargo check --manifest-path tests/no_std_consumer/Cargo.toml
+  embedded:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+        # Cargo reads the QEMU runner from `tests/embedded/.cargo/config.toml`.
+        working-directory: tests/embedded
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
+          targets: thumbv7em-none-eabi,thumbv7m-none-eabi
+      - name: Install QEMU
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends qemu-system-arm
+      # Linking fails with "no global memory allocator found" if anything pulls in `alloc`.
+      - name: Link firmware without a heap
+        run: cargo build --locked --release --target thumbv7em-none-eabi --bin noheap
+      - name: Link firmware with a heap
+        run: cargo build --locked --release --target thumbv7em-none-eabi --bin heap --features heap
+      - name: Run firmware without a heap
+        run: |
+          cargo run --locked --release --target thumbv7m-none-eabi --bin noheap | tee noheap.log
+          grep --quiet "no-heap contract OK" noheap.log
+      - name: Run firmware with a heap
+        run: |
+          cargo run --locked --release --target thumbv7m-none-eabi --bin heap --features heap | tee heap.log
+          grep --quiet "bare-metal heap contract OK" heap.log
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      WASM: target/wasm32-unknown-unknown/release/collections_wasm_consumer.wasm
+    defaults:
+      run:
+        shell: bash
+        working-directory: tests/wasm_consumer
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+      - name: Check the library with all features
+        working-directory: .
+        run: cargo check --locked --target wasm32-unknown-unknown --all-features
+      - name: Build the fixture
+        run: cargo build --release --target wasm32-unknown-unknown
+      # Node is a part of the runner image.
+      - name: Run the contract checks
+        run: |
+          node --version
+          node run.mjs "$WASM" run
+      # `run.mjs` exits with 1 only if the module traps on a failed check.
+      - name: The negative control fails
+        run: |
+          status=0
+          node run.mjs "$WASM" run_failing || status=$?
+          test "$status" -eq 1

@@ -1,3 +1,8 @@
+#![cfg(feature = "alloc")]
+
+#[cfg(feature = "hashbrown")]
+mod common;
+
 use std::collections::BTreeMap;
 #[cfg(feature = "std")]
 use std::collections::HashMap;
@@ -6,10 +11,9 @@ use std::collections::hash_map::DefaultHasher;
 #[cfg(any(feature = "std", feature = "indexmap", feature = "hashbrown"))]
 use std::hash::BuildHasherDefault;
 
-use collections::{CollectionMap, MapEntry};
+use collections::{CollectionEntry, CollectionMap, MapEntry};
 
-fn check_keyed<C: CollectionMap<Key = u8, Value = String>>() {
-    let mut map = C::with_capacity(3);
+fn check_keyed<C: CollectionMap<Key = u8, Value = String>>(mut map: C) {
     assert!(map.is_empty());
 
     assert_eq!(map.insert(1, "one".to_owned()), None);
@@ -40,14 +44,13 @@ fn check_keyed<C: CollectionMap<Key = u8, Value = String>>() {
     }
 
     map.retain(|key, _| *key != 2);
-    assert_eq!(map.len(), 2);
+    assert_eq!(map.item_count(), 2);
     assert_eq!(map.remove(&1), Some("updated1!".to_owned()));
     assert!(!map.contains_key(&1));
     assert_eq!(map.remove(&99), None);
 }
 
-fn check_entry_api<M: CollectionMap<Key = &'static str, Value = usize>>() {
-    let mut map = M::with_capacity(4);
+fn check_entry_api<M: CollectionEntry<Key = &'static str, Value = usize>>(mut map: M) {
     for word in ["map", "entry", "map"] {
         *map.entry(word).or_insert(0) += 1;
     }
@@ -68,8 +71,7 @@ fn check_entry_api<M: CollectionMap<Key = &'static str, Value = usize>>() {
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct OrdOnly(u8);
 
-fn check_ord_only_key<M: CollectionMap<Key = OrdOnly, Value = u8>>() {
-    let mut map = M::with_capacity(1);
+fn check_ord_only_key<M: CollectionMap<Key = OrdOnly, Value = u8> + CollectionEntry>(mut map: M) {
     assert_eq!(map.insert(OrdOnly(1), 10), None);
     assert_eq!(map.get(&OrdOnly(1)), Some(&10));
     *map.entry(OrdOnly(2)).or_insert(20) += 1;
@@ -78,24 +80,28 @@ fn check_ord_only_key<M: CollectionMap<Key = OrdOnly, Value = u8>>() {
 
 #[test]
 fn map_families_follow_the_keyed_contract() {
-    check_keyed::<BTreeMap<u8, String>>();
+    check_keyed(BTreeMap::<u8, String>::new());
 
     #[cfg(feature = "std")]
     {
-        check_keyed::<HashMap<u8, String>>();
+        check_keyed(HashMap::<u8, String>::new());
 
         type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
-        check_keyed::<CustomHashMap<u8, String>>();
+        check_keyed(CustomHashMap::<u8, String>::default());
     }
 
     #[cfg(feature = "hashbrown")]
     {
         use collections::hashbrown::HashMap;
 
-        check_keyed::<HashMap<u8, String>>();
+        check_keyed(HashMap::<u8, String>::new());
 
         type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
-        check_keyed::<CustomHashMap<u8, String>>();
+        check_keyed(CustomHashMap::<u8, String>::default());
+
+        let allocator = common::TestAlloc::default();
+        check_keyed(HashMap::<u8, String, _, _>::new_in(allocator.clone()));
+        assert!(allocator.allocations() > 0);
     }
 
     #[cfg(feature = "indexmap")]
@@ -103,33 +109,39 @@ fn map_families_follow_the_keyed_contract() {
         use collections::indexmap::IndexMap;
 
         type CustomIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<DefaultHasher>>;
-        check_keyed::<CustomIndexMap<u8, String>>();
+        check_keyed(CustomIndexMap::<u8, String>::default());
 
         #[cfg(feature = "std")]
-        check_keyed::<IndexMap<u8, String>>();
+        check_keyed(IndexMap::<u8, String>::new());
     }
 }
 
 #[test]
 fn native_entry_operations_work_generically() {
-    check_entry_api::<BTreeMap<&'static str, usize>>();
+    check_entry_api(BTreeMap::<&'static str, usize>::new());
 
     #[cfg(feature = "std")]
     {
-        check_entry_api::<HashMap<&'static str, usize>>();
+        check_entry_api(HashMap::<&'static str, usize>::new());
 
         type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
-        check_entry_api::<CustomHashMap<&'static str, usize>>();
+        check_entry_api(CustomHashMap::<&'static str, usize>::default());
     }
 
     #[cfg(feature = "hashbrown")]
     {
         use collections::hashbrown::HashMap;
 
-        check_entry_api::<HashMap<&'static str, usize>>();
+        check_entry_api(HashMap::<&'static str, usize>::new());
 
         type CustomHashMap<K, V> = HashMap<K, V, BuildHasherDefault<DefaultHasher>>;
-        check_entry_api::<CustomHashMap<&'static str, usize>>();
+        check_entry_api(CustomHashMap::<&'static str, usize>::default());
+
+        let allocator = common::TestAlloc::default();
+        check_entry_api(HashMap::<&'static str, usize, _, _>::new_in(
+            allocator.clone(),
+        ));
+        assert!(allocator.allocations() > 0);
     }
 
     #[cfg(feature = "indexmap")]
@@ -137,16 +149,16 @@ fn native_entry_operations_work_generically() {
         use collections::indexmap::IndexMap;
 
         type CustomIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<DefaultHasher>>;
-        check_entry_api::<CustomIndexMap<&'static str, usize>>();
+        check_entry_api(CustomIndexMap::<&'static str, usize>::default());
 
         #[cfg(feature = "std")]
-        check_entry_api::<IndexMap<&'static str, usize>>();
+        check_entry_api(IndexMap::<&'static str, usize>::new());
     }
 }
 
 #[test]
 fn btree_map_accepts_keys_that_are_not_hashable() {
-    check_ord_only_key::<BTreeMap<OrdOnly, u8>>();
+    check_ord_only_key(BTreeMap::<OrdOnly, u8>::new());
 }
 
 #[cfg(feature = "indexmap")]

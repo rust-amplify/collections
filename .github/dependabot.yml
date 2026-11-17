@@ -1,0 +1,26 @@
+version: 2
+
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # `allocator-api2` has to stay on the version line which `hashbrown`
+      # requires (see `Cargo.toml`); it is updated together with `hashbrown`.
+      - dependency-name: allocator-api2
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+
+  # The lock file of the firmware fixture is committed.
+  - package-ecosystem: cargo
+    directory: /tests/embedded
+    schedule:
+      interval: monthly
+
+  # Actions are pinned to commit hashes in `.github/workflows`.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -22,45 +22,106 @@
 ///
 /// # Collection contract
 ///
-/// `len()` reports the number of items for collections and the number of bytes
-/// for `String`. `push()` appends to sequences and linked lists, adds to a
-/// `BinaryHeap`, inserts into sets and maps, and appends a UTF-8 encoded `char`
-/// to `String`. Duplicate set values do not increase the length; inserting an
-/// existing map key replaces its value.
+/// `item_count()` returns the number of values of `Item` held by the
+/// collection. For UTF-8 strings this counts `char`s and is O(n); it is O(1)
+/// for other collections. `is_empty()` is O(1) for every implementation.
+/// `push()` appends to sequences and linked lists, adds to a `BinaryHeap`,
+/// inserts into sets and maps, and appends a `char` to strings. Duplicate set
+/// values do not increase the item count; inserting an existing map key
+/// replaces its value.
 ///
-/// `with_capacity()` reserves space for the requested number of items for
-/// sequences, heaps, sets and maps, or bytes for `String`. `BTreeSet`,
-/// `BTreeMap` and `LinkedList` cannot reserve capacity and ignore the argument.
-pub trait Collection: FromIterator<Self::Item> + Extend<Self::Item> {
+/// `push()` is infallible: growable collections abort or panic when the
+/// allocation fails, and fixed-capacity collections panic when they are full.
+/// Use [`CollectionCapacity::try_push`] to get the item back instead.
+///
+/// No length method is defined by this trait, so a concrete type's inherent
+/// `len()` remains unambiguous. Use [`CollectionBytes`] when the byte length is
+/// needed.
+///
+/// ```compile_fail,E0599
+/// use collections::CollectionBase;
+///
+/// fn length<C: CollectionBase>(collection: &C) -> usize {
+///     collection.len()
+/// }
+/// ```
+pub trait CollectionBase {
     /// Item type contained within the collection.
     type Item;
 
-    /// Creates a new collection with the requested capacity where supported.
-    fn with_capacity(capacity: usize) -> Self;
+    /// Returns the number of `Item`s in the collection.
+    ///
+    /// This is O(n) for UTF-8 strings, where it counts `char`s, and O(1) for
+    /// all other collection types.
+    fn item_count(&self) -> usize;
 
-    /// Returns the number of items, or the number of bytes for `String`.
-    fn len(&self) -> usize;
-
-    /// Detects whether a collection is empty.
+    /// Detects whether a collection is empty. This is O(1) for every
+    /// implementation.
     #[inline]
     fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.item_count() == 0
     }
 
     /// Appends or inserts an element into the collection.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a fixed-capacity collection is full. Growable collections
+    /// panic or abort if the required memory cannot be allocated.
     fn push(&mut self, elem: Self::Item);
 
     /// Removes all elements from the collection.
     fn clear(&mut self);
 }
 
+/// Trait for contiguous byte collections.
+///
+/// It is implemented for UTF-8 strings and byte buffers, but not for general
+/// collections whose items happen to be bytes.
+///
+/// ```compile_fail,E0277
+/// use collections::CollectionBytes;
+///
+/// fn bytes<C: CollectionBytes>(collection: &C) -> usize {
+///     collection.byte_len()
+/// }
+///
+/// let values = vec![1_u32, 2];
+/// bytes(&values);
+/// ```
+pub trait CollectionBytes: CollectionBase {
+    /// Returns the number of bytes stored in the collection. This is O(1).
+    fn byte_len(&self) -> usize;
+
+    /// Returns the number of bytes added by pushing `item`.
+    fn item_byte_len(item: &Self::Item) -> usize;
+}
+
+/// Trait implemented by collections with a default constructor and iterator
+/// support.
+///
+/// `with_capacity()` reserves space for the requested number of items for
+/// sequences, heaps, sets and maps, or bytes for strings. `BTreeSet`,
+/// `BTreeMap` and `LinkedList` cannot reserve capacity and ignore the argument,
+/// as do fixed-capacity collections, whose capacity is a part of the type.
+///
+/// An empty collection is created with `Default::default()`.
+pub trait Collection:
+    CollectionBase + Default + FromIterator<Self::Item> + Extend<Self::Item>
+{
+    /// Creates a new collection with the requested capacity where supported.
+    ///
+    /// The capacity must not come from an untrusted source: growable
+    /// collections panic or abort if it cannot be allocated. Create an empty
+    /// collection and use [`CollectionCapacity::try_reserve`] instead.
+    fn with_capacity(capacity: usize) -> Self;
+}
+
 /// Trait implemented by collections that support custom allocators.
 ///
 /// Unlike [`Collection`], this trait does not require `FromIterator`, since
 /// allocator-aware collections cannot always be constructed by `collect()`.
-pub trait CollectionAlloc: Extend<Self::Item> + Sized {
-    /// Item type contained within the collection.
-    type Item;
+pub trait CollectionAlloc: CollectionBase + Extend<Self::Item> + Sized {
     /// Allocator used by the collection.
     type Allocator;
 
@@ -74,33 +135,64 @@ pub trait CollectionAlloc: Extend<Self::Item> + Sized {
 
     /// Returns a reference to the collection's allocator.
     fn allocator(&self) -> &Self::Allocator;
+}
 
-    /// Returns the number of items in the collection.
-    fn len(&self) -> usize;
+/// Trait implemented by collections that can reserve storage capacity.
+///
+/// Capacity and reservation amounts use the collection's native storage unit:
+/// bytes for strings and items for other collections. A string with a capacity
+/// of `n` may therefore hold fewer than `n` `char`s.
+///
+/// Fixed-capacity collections never allocate: their capacity is constant, and
+/// a reservation only checks that the requested room is left.
+///
+/// # Untrusted sizes
+///
+/// [`Collection::with_capacity`], [`CollectionAlloc::with_capacity_in`] and
+/// [`reserve`](Self::reserve) panic or abort the process when the requested
+/// memory cannot be allocated, which makes a size taken from untrusted input a
+/// denial-of-service vector. Use [`try_reserve`](Self::try_reserve) and
+/// [`try_push`](Self::try_push) for such sizes and data.
+pub trait CollectionCapacity: CollectionBase {
+    /// Error returned when a reservation cannot be satisfied.
+    type ReserveError;
 
-    /// Detects whether the collection is empty.
-    #[inline]
-    fn is_empty(&self) -> bool {
-        self.len() == 0
+    /// Returns the current capacity in the collection's native storage unit.
+    fn capacity(&self) -> usize;
+
+    /// Reserves space for at least `additional` more storage units.
+    ///
+    /// # Panics
+    ///
+    /// Panics or aborts if the allocation fails or the new capacity overflows.
+    /// Panics if a fixed-capacity collection has less room left.
+    fn reserve(&mut self, additional: usize);
+
+    /// Attempts to reserve space for at least `additional` more storage units
+    /// without panicking or aborting on failure.
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError>;
+
+    /// Attempts to append or insert an item without panicking or aborting when
+    /// there is no room for it.
+    ///
+    /// Returns the item if the required capacity cannot be reserved. Inserting
+    /// an already present set value or map key into a full fixed-capacity
+    /// collection succeeds, since it needs no room.
+    fn try_push(&mut self, elem: Self::Item) -> Result<(), Self::Item> {
+        if self.try_reserve(1).is_err() {
+            return Err(elem);
+        }
+        self.push(elem);
+        Ok(())
     }
-
-    /// Appends or inserts an element into the collection.
-    fn push(&mut self, elem: Self::Item);
-
-    /// Removes all elements from the collection.
-    fn clear(&mut self);
 }
 
 /// Trait implemented by key-value maps.
-pub trait CollectionMap: Collection<Item = (Self::Key, Self::Value)> {
+pub trait CollectionMap: CollectionBase<Item = (Self::Key, Self::Value)> {
     /// Key type for the collection.
     type Key;
     /// Value type for the collection.
     type Value;
-    /// Native entry type used for in-place map operations.
-    type Entry<'a>: MapEntry<'a, Key = Self::Key, Value = Self::Value>
-    where
-        Self: 'a;
 
     /// Checks whether a given key is contained in the collection.
     fn contains_key(&self, key: &Self::Key) -> bool;
@@ -138,10 +230,6 @@ pub trait CollectionMap: Collection<Item = (Self::Key, Self::Value)> {
     /// it was in the collection.
     fn remove(&mut self, key: &Self::Key) -> Option<Self::Value>;
 
-    /// Gets the given key's corresponding entry in the map for in-place
-    /// manipulation.
-    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_>;
-
     /// Retains only the elements specified by the predicate.
     ///
     /// In other words, remove all pairs `(k, v)` for which `f(&k, &mut v)`
@@ -151,7 +239,7 @@ pub trait CollectionMap: Collection<Item = (Self::Key, Self::Value)> {
 }
 
 /// Trait implemented by set collections.
-pub trait CollectionSet: Collection {
+pub trait CollectionSet: CollectionBase {
     /// Checks whether an equal item is present in the set.
     fn contains(&self, item: &Self::Item) -> bool;
 
@@ -176,6 +264,18 @@ pub trait CollectionSet: Collection {
 
     /// Retains only the items specified by the predicate.
     fn retain(&mut self, f: impl FnMut(&Self::Item) -> bool);
+}
+
+/// Trait implemented by maps that expose an in-place entry API.
+pub trait CollectionEntry: CollectionMap {
+    /// Native entry type used for in-place map operations.
+    type Entry<'a>: MapEntry<'a, Key = Self::Key, Value = Self::Value>
+    where
+        Self: 'a;
+
+    /// Gets the given key's corresponding entry in the map for in-place
+    /// manipulation.
+    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_>;
 }
 
 /// Common interface over the native entry types of maps.

@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
 use collections::{bmap, bset, deque, heap, list, s};
@@ -55,6 +57,26 @@ fn alloc_macros_support_empty_plain_and_owned_forms() {
     assert_eq!(owned_heap.peek().unwrap(), "second");
 }
 
+#[test]
+fn alloc_macros_reserve_the_capacity_and_evaluate_items_once() {
+    let mut calls = 0u8;
+    let mut next = || {
+        calls += 1;
+        calls
+    };
+
+    let deque = deque! { next() => next() => next() };
+    assert_eq!(deque, [1, 2, 3]);
+    assert!(deque.capacity() >= 3);
+
+    let heap = heap![next(), next(), next(),];
+    assert_eq!(heap.into_sorted_vec(), [4, 5, 6]);
+    assert_eq!(calls, 6);
+
+    let owned: BinaryHeap<String> = heap! { owned: "a", "b", "c" };
+    assert!(owned.capacity() >= 3);
+}
+
 #[cfg(feature = "std")]
 #[test]
 fn std_macros_support_empty_plain_and_owned_forms() {
@@ -79,4 +101,27 @@ fn std_macros_support_empty_plain_and_owned_forms() {
 
     let owned_set = set! { owned: "one", "two" };
     assert!(owned_set.contains("one"));
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn std_macros_reserve_the_capacity_and_evaluate_items_once() {
+    use collections::{map, set};
+
+    let mut calls = 0u8;
+    let mut next = || {
+        calls += 1;
+        calls
+    };
+
+    let map = map! { next() => next(), next() => next() };
+    assert_eq!(map.len(), 2);
+    assert_eq!(map[&1], 2);
+    assert_eq!(map[&3], 4);
+    assert!(map.capacity() >= 2);
+
+    let set = set![next(), next(), next(),];
+    assert_eq!(set.len(), 3);
+    assert!(set.capacity() >= 3);
+    assert_eq!(calls, 7);
 }

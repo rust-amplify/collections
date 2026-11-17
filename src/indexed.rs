@@ -22,16 +22,15 @@ use core::hash::{BuildHasher, Hash};
 
 use indexmap::{IndexMap, IndexSet, map};
 
-use super::{Collection, CollectionMap, CollectionSet, MapEntry};
+use super::{
+    Collection, CollectionBase, CollectionCapacity, CollectionEntry, CollectionMap, CollectionSet,
+    MapEntry,
+};
 
-impl<T: Eq + Hash, S: BuildHasher + Default> Collection for IndexSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher> CollectionBase for IndexSet<T, S> {
     type Item = T;
 
-    fn with_capacity(capacity: usize) -> Self {
-        IndexSet::with_capacity_and_hasher(capacity, S::default())
-    }
-
-    fn len(&self) -> usize {
+    fn item_count(&self) -> usize {
         IndexSet::len(self)
     }
 
@@ -44,7 +43,13 @@ impl<T: Eq + Hash, S: BuildHasher + Default> Collection for IndexSet<T, S> {
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for IndexSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher + Default> Collection for IndexSet<T, S> {
+    fn with_capacity(capacity: usize) -> Self {
+        IndexSet::with_capacity_and_hasher(capacity, S::default())
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher> CollectionSet for IndexSet<T, S> {
     fn contains(&self, item: &Self::Item) -> bool {
         IndexSet::contains(self, item)
     }
@@ -78,14 +83,26 @@ impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for IndexSet<T, S> {
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for IndexMap<K, V, S> {
-    type Item = (K, V);
+impl<T: Eq + Hash, S: BuildHasher> CollectionCapacity for IndexSet<T, S> {
+    type ReserveError = indexmap::TryReserveError;
 
-    fn with_capacity(capacity: usize) -> Self {
-        IndexMap::with_capacity_and_hasher(capacity, S::default())
+    fn capacity(&self) -> usize {
+        IndexSet::capacity(self)
     }
 
-    fn len(&self) -> usize {
+    fn reserve(&mut self, additional: usize) {
+        IndexSet::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        IndexSet::try_reserve(self, additional)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionBase for IndexMap<K, V, S> {
+    type Item = (K, V);
+
+    fn item_count(&self) -> usize {
         IndexMap::len(self)
     }
 
@@ -98,15 +115,15 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for IndexMap<K, V, S>
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for IndexMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for IndexMap<K, V, S> {
+    fn with_capacity(capacity: usize) -> Self {
+        IndexMap::with_capacity_and_hasher(capacity, S::default())
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionMap for IndexMap<K, V, S> {
     type Key = K;
     type Value = V;
-    type Entry<'a>
-        = map::Entry<'a, K, V>
-    where
-        K: 'a,
-        V: 'a,
-        S: 'a;
 
     fn contains_key(&self, key: &Self::Key) -> bool {
         IndexMap::contains_key(self, key)
@@ -148,12 +165,37 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for IndexMap<K, V,
         IndexMap::shift_remove(self, key)
     }
 
-    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
-        IndexMap::entry(self, key)
-    }
-
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         IndexMap::retain(self, f)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionCapacity for IndexMap<K, V, S> {
+    type ReserveError = indexmap::TryReserveError;
+
+    fn capacity(&self) -> usize {
+        IndexMap::capacity(self)
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        IndexMap::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        IndexMap::try_reserve(self, additional)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> CollectionEntry for IndexMap<K, V, S> {
+    type Entry<'a>
+        = map::Entry<'a, K, V>
+    where
+        K: 'a,
+        V: 'a,
+        S: 'a;
+
+    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
+        IndexMap::entry(self, key)
     }
 }
 

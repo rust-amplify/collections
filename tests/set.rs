@@ -1,3 +1,8 @@
+#![cfg(feature = "alloc")]
+
+#[cfg(feature = "hashbrown")]
+mod common;
+
 use std::collections::BTreeSet;
 #[cfg(feature = "std")]
 use std::collections::HashSet;
@@ -8,15 +13,14 @@ use std::hash::BuildHasherDefault;
 
 use collections::CollectionSet;
 
-fn check_set<C: CollectionSet<Item = u8>>() {
-    let mut set = C::with_capacity(3);
+fn check_set<C: CollectionSet<Item = u8>>(mut set: C) {
     assert!(set.is_empty());
 
     assert!(set.insert(1));
     assert!(set.insert(2));
     assert!(set.insert(3));
     assert!(!set.insert(1));
-    assert_eq!(set.len(), 3);
+    assert_eq!(set.item_count(), 3);
 
     assert!(set.contains(&1));
     assert_eq!(set.get(&2), Some(&2));
@@ -31,10 +35,10 @@ fn check_set<C: CollectionSet<Item = u8>>() {
     assert_eq!(set.replace(4), Some(4));
     assert_eq!(set.replace(99), None);
     assert!(set.contains(&99));
-    assert_eq!(set.len(), 5);
+    assert_eq!(set.item_count(), 5);
 
     set.retain(|item| item % 2 == 0);
-    assert_eq!(set.len(), 2);
+    assert_eq!(set.item_count(), 2);
     assert!(set.contains(&2));
     assert!(set.contains(&4));
     assert!(set.remove(&2));
@@ -48,24 +52,28 @@ fn check_set<C: CollectionSet<Item = u8>>() {
 
 #[test]
 fn set_families_follow_the_set_contract() {
-    check_set::<BTreeSet<u8>>();
+    check_set(BTreeSet::<u8>::new());
 
     #[cfg(feature = "std")]
     {
-        check_set::<HashSet<u8>>();
+        check_set(HashSet::<u8>::new());
 
         type CustomHashSet<T> = HashSet<T, BuildHasherDefault<DefaultHasher>>;
-        check_set::<CustomHashSet<u8>>();
+        check_set(CustomHashSet::<u8>::default());
     }
 
     #[cfg(feature = "hashbrown")]
     {
         use collections::hashbrown::HashSet;
 
-        check_set::<HashSet<u8>>();
+        check_set(HashSet::<u8>::new());
 
         type CustomHashSet<T> = HashSet<T, BuildHasherDefault<DefaultHasher>>;
-        check_set::<CustomHashSet<u8>>();
+        check_set(CustomHashSet::<u8>::default());
+
+        let allocator = common::TestAlloc::default();
+        check_set(HashSet::<u8, _, _>::new_in(allocator.clone()));
+        assert!(allocator.allocations() > 0);
     }
 
     #[cfg(feature = "indexmap")]
@@ -73,10 +81,10 @@ fn set_families_follow_the_set_contract() {
         use collections::indexmap::IndexSet;
 
         type CustomIndexSet<T> = IndexSet<T, BuildHasherDefault<DefaultHasher>>;
-        check_set::<CustomIndexSet<u8>>();
+        check_set(CustomIndexSet::<u8>::default());
 
         #[cfg(feature = "std")]
-        check_set::<IndexSet<u8>>();
+        check_set(IndexSet::<u8>::new());
     }
 }
 

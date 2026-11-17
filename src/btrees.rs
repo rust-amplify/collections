@@ -20,17 +20,12 @@
 
 use alloc::collections::{BTreeMap, BTreeSet, btree_map};
 
-use super::{Collection, CollectionMap, CollectionSet, MapEntry};
+use super::{Collection, CollectionBase, CollectionEntry, CollectionMap, CollectionSet, MapEntry};
 
-impl<T: Ord> Collection for BTreeSet<T> {
+impl<T: Ord> CollectionBase for BTreeSet<T> {
     type Item = T;
 
-    /// B-tree collections cannot reserve capacity, so this argument is ignored.
-    fn with_capacity(_capacity: usize) -> Self {
-        BTreeSet::new()
-    }
-
-    fn len(&self) -> usize {
+    fn item_count(&self) -> usize {
         BTreeSet::len(self)
     }
 
@@ -40,6 +35,13 @@ impl<T: Ord> Collection for BTreeSet<T> {
 
     fn clear(&mut self) {
         BTreeSet::clear(self)
+    }
+}
+
+impl<T: Ord> Collection for BTreeSet<T> {
+    /// B-tree collections cannot reserve capacity, so this argument is ignored.
+    fn with_capacity(_capacity: usize) -> Self {
+        BTreeSet::new()
     }
 }
 
@@ -77,15 +79,10 @@ impl<T: Ord> CollectionSet for BTreeSet<T> {
     }
 }
 
-impl<K: Ord, V> Collection for BTreeMap<K, V> {
+impl<K: Ord, V> CollectionBase for BTreeMap<K, V> {
     type Item = (K, V);
 
-    /// B-tree collections cannot reserve capacity, so this argument is ignored.
-    fn with_capacity(_capacity: usize) -> Self {
-        BTreeMap::new()
-    }
-
-    fn len(&self) -> usize {
+    fn item_count(&self) -> usize {
         BTreeMap::len(self)
     }
 
@@ -98,14 +95,16 @@ impl<K: Ord, V> Collection for BTreeMap<K, V> {
     }
 }
 
+impl<K: Ord, V> Collection for BTreeMap<K, V> {
+    /// B-tree collections cannot reserve capacity, so this argument is ignored.
+    fn with_capacity(_capacity: usize) -> Self {
+        BTreeMap::new()
+    }
+}
+
 impl<K: Ord, V> CollectionMap for BTreeMap<K, V> {
     type Key = K;
     type Value = V;
-    type Entry<'a>
-        = btree_map::Entry<'a, K, V>
-    where
-        K: 'a,
-        V: 'a;
 
     fn contains_key(&self, key: &Self::Key) -> bool {
         BTreeMap::contains_key(self, key)
@@ -147,12 +146,20 @@ impl<K: Ord, V> CollectionMap for BTreeMap<K, V> {
         BTreeMap::remove(self, key)
     }
 
-    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
-        BTreeMap::entry(self, key)
-    }
-
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         BTreeMap::retain(self, f)
+    }
+}
+
+impl<K: Ord, V> CollectionEntry for BTreeMap<K, V> {
+    type Entry<'a>
+        = btree_map::Entry<'a, K, V>
+    where
+        K: 'a,
+        V: 'a;
+
+    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
+        BTreeMap::entry(self, key)
     }
 }
 

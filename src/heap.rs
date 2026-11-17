@@ -20,16 +20,12 @@
 
 use alloc::collections::BinaryHeap;
 
-use super::Collection;
+use super::{Collection, CollectionBase, CollectionCapacity};
 
-impl<T: Ord> Collection for BinaryHeap<T> {
+impl<T: Ord> CollectionBase for BinaryHeap<T> {
     type Item = T;
 
-    fn with_capacity(capacity: usize) -> Self {
-        BinaryHeap::with_capacity(capacity)
-    }
-
-    fn len(&self) -> usize {
+    fn item_count(&self) -> usize {
         BinaryHeap::len(self)
     }
 
@@ -39,5 +35,27 @@ impl<T: Ord> Collection for BinaryHeap<T> {
 
     fn clear(&mut self) {
         BinaryHeap::clear(self)
+    }
+}
+
+impl<T: Ord> Collection for BinaryHeap<T> {
+    fn with_capacity(capacity: usize) -> Self {
+        BinaryHeap::with_capacity(capacity)
+    }
+}
+
+impl<T: Ord> CollectionCapacity for BinaryHeap<T> {
+    type ReserveError = alloc::collections::TryReserveError;
+
+    fn capacity(&self) -> usize {
+        BinaryHeap::capacity(self)
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        BinaryHeap::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        BinaryHeap::try_reserve(self, additional)
     }
 }

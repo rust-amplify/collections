@@ -1,36 +1,56 @@
 [package]
-name = "collections"
+name = "collections-traits"
 version = "0.1.0"
 authors = ["Dr Maxim Orlovsky <orlovsky@ubideco.org>"]
 description = "The missed collection traits"
 repository = "https://github.com/rust-amplify/collections"
-homepage = "https://docs.rs/collections"
+homepage = "https://docs.rs/collections-traits"
 keywords = ["generics", "core", "collections", "patterns"]
 categories = ["data-structures", "rust-patterns", "no-std"]
 readme = "README.md"
 license = "Apache-2.0"
 edition = "2024"
 rust-version = "1.100.0" # Due to allocator-aware collection support
-exclude = [".github"]
+include = ["Cargo.toml", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "src/**"]
 
 [lib]
 name = "collections"
 
 [dependencies]
 ascii = { version = "1.1.0", default-features = false, optional = true }
-indexmap = { version = "2.14.2", default-features = false, optional = true } # The lock file pins this version for MSRV.
-allocator-api2 = { version = "0.4.0", default-features = false, features = ["alloc"], optional = true }
+indexmap = { version = "2.14.2", default-features = false, optional = true }
+# Keep allocator-api2 on hashbrown's 0.2 line; `nightly` re-exports core::alloc.
+allocator-api2 = { version = "0.2.9", default-features = false, features = ["alloc", "nightly"], optional = true }
 hashbrown = { version = "0.17.1", default-features = false, features = ["default-hasher", "allocator-api2"], optional = true }
+heapless = { version = "0.9.3", default-features = false, optional = true }
 
 [features]
 default = ["std"]
-all = ["std", "ascii", "indexmap", "hashbrown"]
+all = ["std", "ascii", "indexmap", "hashbrown", "heapless"]
 
-std = ["ascii?/std", "indexmap?/std"]
+std = ["alloc", "ascii?/std", "indexmap?/std"]
+alloc = []
 
-ascii = ["dep:ascii", "ascii/alloc"]
-indexmap = ["dep:indexmap"]
-hashbrown = ["dep:allocator-api2", "dep:hashbrown"]
+ascii = ["dep:ascii", "ascii/alloc", "alloc"]
+indexmap = ["dep:indexmap", "alloc"]
+hashbrown = ["dep:allocator-api2", "dep:hashbrown", "alloc"]
+heapless = ["dep:heapless"]
 
 [package.metadata.docs.rs]
 features = ["all"]
+
+# These lints apply to the library and to its tests. The library additionally
+# forbids `unsafe` code in `src/lib.rs`; the tests need it for a test allocator.
+[lints.rust]
+non_ascii_idents = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+trivial_numeric_casts = "warn"
+unused_lifetimes = "warn"
+unused_qualifications = "warn"
+
+[lints.clippy]
+dbg_macro = "warn"
+mem_forget = "warn"
+todo = "warn"
+undocumented_unsafe_blocks = "warn"
+unimplemented = "warn"

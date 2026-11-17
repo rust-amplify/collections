@@ -156,13 +156,17 @@ macro_rules! deque {
     { owned: $($value:expr_2021)=>+ } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
-        let mut deque = $crate::alloc::collections::VecDeque::new();
+        let mut deque = $crate::alloc::collections::VecDeque::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($value); }),+]) },
+        );
         $(deque.push_back($value.to_owned());)+
         deque
     }};
 
     { $($value:expr_2021)=>+ } => {{
-        let mut deque = $crate::alloc::collections::VecDeque::new();
+        let mut deque = $crate::alloc::collections::VecDeque::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($value); }),+]) },
+        );
         $(deque.push_back($value);)+
         deque
     }};
@@ -189,13 +193,17 @@ macro_rules! heap {
     { owned: $($value:expr_2021),+ $(,)? } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
-        let mut heap = $crate::alloc::collections::BinaryHeap::new();
+        let mut heap = $crate::alloc::collections::BinaryHeap::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($value); }),+]) },
+        );
         $(heap.push($value.to_owned());)+
         heap
     }};
 
     { $($value:expr_2021),+ $(,)? } => {{
-        let mut heap = $crate::alloc::collections::BinaryHeap::new();
+        let mut heap = $crate::alloc::collections::BinaryHeap::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($value); }),+]) },
+        );
         $(heap.push($value);)+
         heap
     }};
@@ -223,13 +231,17 @@ macro_rules! map {
     { owned: $($key:expr_2021 => $value:expr_2021),+ $(,)? } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
-        let mut map = $crate::std::collections::HashMap::new();
+        let mut map = $crate::std::collections::HashMap::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($key); }),+]) },
+        );
         $(map.insert($key.to_owned(), $value.to_owned());)+
         map
     }};
 
     { $($key:expr_2021 => $value:expr_2021),+ $(,)? } => {{
-        let mut map = $crate::std::collections::HashMap::new();
+        let mut map = $crate::std::collections::HashMap::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($key); }),+]) },
+        );
         $(map.insert($key, $value);)+
         map
     }};
@@ -257,13 +269,17 @@ macro_rules! set {
     { owned: $($value:expr_2021),+ $(,)? } => {{
         use $crate::alloc::borrow::ToOwned as _;
 
-        let mut set = $crate::std::collections::HashSet::new();
+        let mut set = $crate::std::collections::HashSet::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($value); }),+]) },
+        );
         $(set.insert($value.to_owned());)+
         set
     }};
 
     { $($value:expr_2021),+ $(,)? } => {{
-        let mut set = $crate::std::collections::HashSet::new();
+        let mut set = $crate::std::collections::HashSet::with_capacity(
+            const { <[()]>::len(&[$({ ::core::stringify!($value); }),+]) },
+        );
         $(set.insert($value);)+
         set
     }};

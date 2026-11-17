@@ -18,21 +18,20 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
+use core::alloc::Allocator;
 use core::hash::{BuildHasher, Hash};
 
-use allocator_api2::alloc::Allocator;
 use hashbrown::{HashMap, HashSet, hash_map};
 
-use super::{Collection, CollectionAlloc, CollectionMap, CollectionSet, MapEntry};
+use super::{
+    Collection, CollectionAlloc, CollectionBase, CollectionCapacity, CollectionEntry,
+    CollectionMap, CollectionSet, MapEntry,
+};
 
-impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher, A: Allocator> CollectionBase for HashSet<T, S, A> {
     type Item = T;
 
-    fn with_capacity(capacity: usize) -> Self {
-        HashSet::with_capacity_and_hasher(capacity, S::default())
-    }
-
-    fn len(&self) -> usize {
+    fn item_count(&self) -> usize {
         HashSet::len(self)
     }
 
@@ -45,7 +44,13 @@ impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for HashSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
+    fn with_capacity(capacity: usize) -> Self {
+        HashSet::with_capacity_and_hasher(capacity, S::default())
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher, A: Allocator> CollectionSet for HashSet<T, S, A> {
     fn contains(&self, item: &Self::Item) -> bool {
         HashSet::contains(self, item)
     }
@@ -79,10 +84,23 @@ impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for HashSet<T, S> {
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher + Default, A: Allocator + Clone> CollectionAlloc
-    for HashSet<T, S, A>
-{
-    type Item = T;
+impl<T: Eq + Hash, S: BuildHasher, A: Allocator> CollectionCapacity for HashSet<T, S, A> {
+    type ReserveError = hashbrown::TryReserveError;
+
+    fn capacity(&self) -> usize {
+        HashSet::capacity(self)
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        HashSet::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        HashSet::try_reserve(self, additional)
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher + Default, A: Allocator> CollectionAlloc for HashSet<T, S, A> {
     type Allocator = A;
 
     fn with_capacity_in(capacity: usize, allocator: Self::Allocator) -> Self {
@@ -92,28 +110,12 @@ impl<T: Eq + Hash, S: BuildHasher + Default, A: Allocator + Clone> CollectionAll
     fn allocator(&self) -> &Self::Allocator {
         HashSet::allocator(self)
     }
-
-    fn len(&self) -> usize {
-        HashSet::len(self)
-    }
-
-    fn push(&mut self, elem: Self::Item) {
-        HashSet::insert(self, elem);
-    }
-
-    fn clear(&mut self) {
-        HashSet::clear(self)
-    }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher, A: Allocator> CollectionBase for HashMap<K, V, S, A> {
     type Item = (K, V);
 
-    fn with_capacity(capacity: usize) -> Self {
-        HashMap::with_capacity_and_hasher(capacity, S::default())
-    }
-
-    fn len(&self) -> usize {
+    fn item_count(&self) -> usize {
         HashMap::len(self)
     }
 
@@ -126,15 +128,15 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> 
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for HashMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> Collection for HashMap<K, V, S> {
+    fn with_capacity(capacity: usize) -> Self {
+        HashMap::with_capacity_and_hasher(capacity, S::default())
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher, A: Allocator> CollectionMap for HashMap<K, V, S, A> {
     type Key = K;
     type Value = V;
-    type Entry<'a>
-        = hash_map::Entry<'a, K, V, S>
-    where
-        K: 'a,
-        V: 'a,
-        S: 'a;
 
     fn contains_key(&self, key: &Self::Key) -> bool {
         HashMap::contains_key(self, key)
@@ -176,19 +178,30 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for HashMap<K, V, 
         HashMap::remove(self, key)
     }
 
-    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
-        HashMap::entry(self, key)
-    }
-
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         HashMap::retain(self, f)
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Default, A: Allocator + Clone> CollectionAlloc
+impl<K: Eq + Hash, V, S: BuildHasher, A: Allocator> CollectionCapacity for HashMap<K, V, S, A> {
+    type ReserveError = hashbrown::TryReserveError;
+
+    fn capacity(&self) -> usize {
+        HashMap::capacity(self)
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        HashMap::reserve(self, additional)
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ReserveError> {
+        HashMap::try_reserve(self, additional)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher + Default, A: Allocator> CollectionAlloc
     for HashMap<K, V, S, A>
 {
-    type Item = (K, V);
     type Allocator = A;
 
     fn with_capacity_in(capacity: usize, allocator: Self::Allocator) -> Self {
@@ -198,21 +211,25 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default, A: Allocator + Clone> Collection
     fn allocator(&self) -> &Self::Allocator {
         HashMap::allocator(self)
     }
+}
 
-    fn len(&self) -> usize {
-        HashMap::len(self)
-    }
+impl<K: Eq + Hash, V, S: BuildHasher, A: Allocator> CollectionEntry for HashMap<K, V, S, A> {
+    type Entry<'a>
+        = hash_map::Entry<'a, K, V, S, A>
+    where
+        K: 'a,
+        V: 'a,
+        S: 'a,
+        A: 'a;
 
-    fn push(&mut self, elem: Self::Item) {
-        HashMap::insert(self, elem.0, elem.1);
-    }
-
-    fn clear(&mut self) {
-        HashMap::clear(self)
+    fn entry(&mut self, key: Self::Key) -> Self::Entry<'_> {
+        HashMap::entry(self, key)
     }
 }
 
-impl<'a, K: Hash + 'a, V: 'a, S: BuildHasher + 'a> MapEntry<'a> for hash_map::Entry<'a, K, V, S> {
+impl<'a, K: Hash + 'a, V: 'a, S: BuildHasher + 'a, A: Allocator + 'a> MapEntry<'a>
+    for hash_map::Entry<'a, K, V, S, A>
+{
     type Key = K;
     type Value = V;
 
