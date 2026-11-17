@@ -10,7 +10,7 @@ categories = ["data-structures", "rust-patterns", "no-std"]
 readme = "README.md"
 license = "Apache-2.0"
 edition = "2024"
-rust-version = "1.85.0" # Due to 2024 rust edition
+rust-version = "1.100.0" # Due to allocator-aware collection support
 exclude = [".github"]
 
 [lib]
@@ -19,7 +19,8 @@ name = "collections"
 [dependencies]
 ascii = { version = "1.1.0", default-features = false, optional = true }
 indexmap = { version = "2.11.4", default-features = false, optional = true } # The lock file pins this version for MSRV.
-hashbrown = { version = "0.17.1", default-features = false, features = ["default-hasher"], optional = true }
+allocator-api2 = { version = "0.2.9", default-features = false, features = ["alloc"], optional = true }
+hashbrown = { version = "0.17.1", default-features = false, features = ["default-hasher", "allocator-api2"], optional = true }
 
 [features]
 default = ["std"]
@@ -29,7 +30,7 @@ std = ["ascii?/std", "indexmap?/std"]
 
 ascii = ["dep:ascii", "ascii/alloc"]
 indexmap = ["dep:indexmap"]
-hashbrown = ["dep:hashbrown"]
+hashbrown = ["dep:allocator-api2", "dep:hashbrown"]
 
 [package.metadata.docs.rs]
 features = ["all"]

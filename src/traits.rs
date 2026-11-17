@@ -55,6 +55,43 @@ pub trait Collection: FromIterator<Self::Item> + Extend<Self::Item> {
     fn clear(&mut self);
 }
 
+/// Trait implemented by collections that support custom allocators.
+///
+/// Unlike [`Collection`], this trait does not require `FromIterator`, since
+/// allocator-aware collections cannot always be constructed by `collect()`.
+pub trait CollectionAlloc: Extend<Self::Item> + Sized {
+    /// Item type contained within the collection.
+    type Item;
+    /// Allocator used by the collection.
+    type Allocator;
+
+    /// Creates a new collection with the requested capacity and allocator.
+    fn with_capacity_in(capacity: usize, allocator: Self::Allocator) -> Self;
+
+    /// Creates an empty collection with the given allocator.
+    fn new_in(allocator: Self::Allocator) -> Self {
+        Self::with_capacity_in(0, allocator)
+    }
+
+    /// Returns a reference to the collection's allocator.
+    fn allocator(&self) -> &Self::Allocator;
+
+    /// Returns the number of items in the collection.
+    fn len(&self) -> usize;
+
+    /// Detects whether the collection is empty.
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Appends or inserts an element into the collection.
+    fn push(&mut self, elem: Self::Item);
+
+    /// Removes all elements from the collection.
+    fn clear(&mut self);
+}
+
 /// Trait implemented by key-value maps.
 pub trait CollectionMap: Collection<Item = (Self::Key, Self::Value)> {
     /// Key type for the collection.

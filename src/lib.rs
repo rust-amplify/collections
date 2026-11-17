@@ -22,9 +22,10 @@
 //! Generic traits for working with collection types from `alloc` and `std`.
 //!
 //! [`Collection`] provides a common interface for sequences, sets, maps and
-//! heaps. [`CollectionSet`] and [`CollectionMap`] add set and map operations;
-//! maps also expose their native entry type through [`MapEntry`]. The crate
-//! works in `no_std` environments when an allocator is available.
+//! heaps. [`CollectionAlloc`] covers allocator-aware collections, while
+//! [`CollectionSet`] and [`CollectionMap`] add set and map operations; maps
+//! also expose their native entry type through [`MapEntry`]. The crate works in
+//! `no_std` environments when an allocator is available.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -33,6 +34,9 @@
 /// Re-export of `alloc` for no-`std` callers and macro expansion.
 pub extern crate alloc;
 
+#[cfg(feature = "hashbrown")]
+/// Re-export of the optional `allocator-api2` dependency used by `hashbrown`.
+pub extern crate allocator_api2;
 #[cfg(feature = "ascii")]
 /// Re-export of the optional `ascii` dependency.
 pub extern crate ascii;
@@ -62,7 +66,7 @@ mod macros;
 #[doc(hidden)]
 pub extern crate std;
 
-pub use traits::{Collection, CollectionMap, CollectionSet, MapEntry};
+pub use traits::{Collection, CollectionAlloc, CollectionMap, CollectionSet, MapEntry};
 
 #[cfg(all(doctest, feature = "std"))]
 #[doc(hidden)]

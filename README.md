@@ -14,8 +14,9 @@ generic code can be written once and work with a `Vec`, a `HashSet`, a
 
 The crate contains:
 
-- four traits, [`Collection`](#collection), [`CollectionSet`](#collectionset),
-  [`CollectionMap`](#collectionmap) and [`MapEntry`](#mapentry);
+- five traits, [`Collection`](#collection), [`CollectionAlloc`](#collectionalloc),
+  [`CollectionSet`](#collectionset), [`CollectionMap`](#collectionmap) and
+  [`MapEntry`](#mapentry);
 - their implementations for the collections from `alloc` and `std`, and
   optionally for the types from the [`ascii`], [`hashbrown`] and [`indexmap`]
   crates;
@@ -110,12 +111,13 @@ collections = { git = "https://github.com/rust-amplify/collections", default-fea
 | `std`      |   yes   | Uses the standard library: adds implementations for `HashMap` and `HashSet`, and `map!`/`set!` macros.   |
 | `ascii`    |   no    | Adds the [`ascii`] dependency and implements `Collection` for `AsciiString`.                             |
 | `indexmap` |   no    | Adds the [`indexmap`] dependency and implements the traits for `IndexMap` and `IndexSet`.                |
-| `hashbrown`|   no    | Adds the [`hashbrown`] dependency and implements the collection traits for its hash maps and sets.        |
+| `hashbrown`|   no    | Adds [`hashbrown`] and `allocator-api2` support for its allocator-aware hash maps and sets.                |
 | `all`      |   no    | Shortcut for `std` + `ascii` + `hashbrown` + `indexmap`.                                                  |
 
 When the optional dependencies are enabled, they are re-exported as
-`collections::ascii`, `collections::hashbrown` and `collections::indexmap`; the
-`alloc` crate is always re-exported as `collections::alloc`.
+`collections::ascii`, `collections::hashbrown`, `collections::indexmap` and
+`collections::allocator_api2` (with `hashbrown`); the `alloc` crate is always
+re-exported as `collections::alloc`.
 
 ## Traits
 
@@ -162,6 +164,48 @@ assert_eq!(vec, [1, 2, 1, 2]);
 
 let set: BTreeSet<u8> = collect_twice([1, 2]);
 assert_eq!(set.len(), 2);
+```
+
+### `CollectionAlloc`
+
+`CollectionAlloc` is the interface for allocator-aware collections. It
+requires `Extend`, but not `FromIterator`, because custom-allocator types are
+not always supported by `collect()`. It is implemented for `Vec<T, A>` and,
+with the `hashbrown` feature, for hashbrown maps and sets using
+`allocator_api2` allocators.
+
+| Item                                              | Description                                      |
+|---------------------------------------------------|--------------------------------------------------|
+| `type Item`                                       | Type of the collection's elements.               |
+| `type Allocator`                                  | Allocator used by the collection.                |
+| `fn with_capacity_in(usize, Allocator) -> Self`  | Creates a collection with capacity and allocator.|
+| `fn new_in(Allocator) -> Self`                   | Creates an empty collection with the allocator.  |
+| `fn allocator(&self) -> &Allocator`              | Returns the allocator used by the collection.    |
+| `fn len(&self) -> usize`                         | Returns the number of items.                     |
+| `fn is_empty(&self) -> bool`                     | Detects whether the collection is empty.          |
+| `fn push(&mut self, Item)`                       | Appends or inserts an element.                   |
+| `fn clear(&mut self)`                            | Removes all elements.                            |
+
+The same generic code can construct vectors with different allocators:
+
+```rust
+use std::alloc::{Global, System};
+
+use collections::CollectionAlloc;
+
+fn values<C: CollectionAlloc<Item = u8, Allocator = Global>>() -> C {
+    let mut values = C::with_capacity_in(2, Global);
+    values.push(1);
+    values.extend([2]);
+    values
+}
+
+let global: Vec<u8, Global> = values();
+assert_eq!(global, [1, 2]);
+
+let mut system = Vec::<u8, System>::new_in(System);
+system.push(3);
+assert_eq!(system, [3]);
 ```
 
 ### `CollectionSet`
@@ -361,22 +405,22 @@ assert_eq!(stock, BTreeMap::from([("apples", 15), ("pears", 0), ("plums", 1)]));
 
 ## Supported collection types
 
-| Type             | Bounds                                  | `Item`      | `Collection` | `CollectionSet` | `CollectionMap` | Required feature |
-|------------------|-----------------------------------------|-------------|:------------:|:--------------:|:---------------:|------------------|
-| `String`         |                                         | `char`      |     yes      |                |                 |                  |
-| `Vec<T>`         |                                         | `T`         |     yes      |                |                 |                  |
-| `VecDeque<T>`    |                                         | `T`         |     yes      |                |                 |                  |
-| `LinkedList<T>`  |                                         | `T`         |     yes      |                |                 |                  |
-| `BinaryHeap<T>`  | `T: Ord`                                | `T`         |     yes      |                |                 |                  |
-| `BTreeSet<T>`    | `T: Ord`                                | `T`         |     yes      |      yes       |                 |                  |
-| `BTreeMap<K, V>` | `K: Ord`                                | `(K, V)`    |     yes      |                |       yes       |                  |
-| `HashSet<T, S>`  | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |      yes       |                 | `std`            |
-| `HashMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes |                |       yes       | `std`            |
-| `hashbrown::HashSet<T, S>` | `T: Eq + Hash`, `S: BuildHasher + Default` | `T` | yes | yes | | `hashbrown` |
-| `hashbrown::HashMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes | | yes | `hashbrown` |
-| `AsciiString`    |                                         | `AsciiChar` |     yes      |                |                 | `ascii`          |
-| `IndexSet<T, S>` | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |      yes       |                 | `indexmap`       |
-| `IndexMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes |                |       yes       | `indexmap`       |
+| Type             | Bounds                                  | `Item`      | `Collection` | `CollectionAlloc` | `CollectionSet` | `CollectionMap` | Required feature |
+|------------------|-----------------------------------------|-------------|:------------:|:----------------:|:--------------:|:---------------:|------------------|
+| `String`         |                                         | `char`      |     yes      |                  |                |                 |                  |
+| `Vec<T, A>`      | `A: core::alloc::Allocator`             | `T`         | yes (default allocator) | yes | | | |
+| `VecDeque<T>`    |                                         | `T`         |     yes      |                  |                |                 |                  |
+| `LinkedList<T>`  |                                         | `T`         |     yes      |                  |                |                 |                  |
+| `BinaryHeap<T>`  | `T: Ord`                                | `T`         |     yes      |                  |                |                 |                  |
+| `BTreeSet<T>`    | `T: Ord`                                | `T`         |     yes      |                  |      yes       |                 |                  |
+| `BTreeMap<K, V>` | `K: Ord`                                | `(K, V)`    |     yes      |                  |                |      yes        |                  |
+| `HashSet<T, S>`  | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |                  |      yes       |                 | `std`            |
+| `HashMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes | | | yes | `std` |
+| `hashbrown::HashSet<T, S, A>` | `T: Eq + Hash`, `S: BuildHasher + Default`, `A: allocator_api2::alloc::Allocator + Clone` | `T` | yes (default A) | yes | yes (default A) | | `hashbrown` |
+| `hashbrown::HashMap<K, V, S, A>` | `K: Eq + Hash`, `S: BuildHasher + Default`, `A: allocator_api2::alloc::Allocator + Clone` | `(K, V)` | yes (default A) | yes | | yes (default A) | `hashbrown` |
+| `AsciiString`    |                                         | `AsciiChar` |     yes      |                  |                |                 | `ascii`          |
+| `IndexSet<T, S>` | `T: Eq + Hash`, `S: BuildHasher + Default` | `T`      |     yes      |                  |      yes       |                 | `indexmap`       |
+| `IndexMap<K, V, S>` | `K: Eq + Hash`, `S: BuildHasher + Default` | `(K, V)` | yes | | | yes | `indexmap` |
 
 Implementation details worth knowing:
 
@@ -387,6 +431,9 @@ Implementation details worth knowing:
 - `BTreeSet`, `BTreeMap` and `LinkedList` can't preallocate memory, so
   `with_capacity` ignores its argument and creates an empty collection.
 - Hashed collections accept any hasher implementing `BuildHasher + Default`.
+- `CollectionAlloc` supports `Vec<T, A>` with `core::alloc::Allocator` and
+  hashbrown collections with `allocator_api2::alloc::Allocator`; the other collection
+  traits are implemented for hashbrown's default allocator.
 - `IndexMap::remove` preserves the order of the remaining elements
   (`shift_remove`), which takes linear time.
 - `entry` returns the native entry type of the map: `btree_map::Entry`,
@@ -478,8 +525,8 @@ The macros may also be imported in the old style, with
 
 ## Minimum supported Rust version
 
-The MSRV is **1.85.0**, required by Rust edition 2024. The traits also use
-`impl Trait` in the return position of trait methods.
+The MSRV is **1.100.0**, which stabilizes allocator support for `Vec<T, A>`;
+Rust edition 2024 alone requires Rust 1.85.0.
 
 CI checks the library with the MSRV, stable, beta and nightly toolchains on
 Linux, macOS and Windows (both x86-64 and ARM), and for the
@@ -490,7 +537,7 @@ Linux, macOS and Windows (both x86-64 and ARM), and for the
 ```text
 src/
 ├── lib.rs          crate root, feature gates and re-exports
-├── traits.rs       `Collection`, `CollectionSet`, `CollectionMap` and `MapEntry`
+├── traits.rs       collection traits, including `CollectionAlloc`
 ├── linear.rs       `String`, `Vec`, `VecDeque` and `LinkedList`
 ├── heap.rs         `BinaryHeap`
 ├── btrees.rs       `BTreeSet` and `BTreeMap`
@@ -501,6 +548,7 @@ src/
 └── macros.rs       collection construction macros
 
 tests/
+├── alloc.rs        allocator-aware collection behavior
 ├── collection.rs   `Collection` implementations and behavior
 ├── keyed.rs        map APIs, entry methods and key bounds
 ├── set.rs          set APIs and set ordering behavior

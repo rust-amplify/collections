@@ -19,11 +19,12 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
+use alloc::alloc::Allocator;
 use alloc::collections::{LinkedList, VecDeque};
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use super::Collection;
+use super::{Collection, CollectionAlloc};
 
 impl Collection for String {
     type Item = char;
@@ -50,6 +51,31 @@ impl<T> Collection for Vec<T> {
 
     fn with_capacity(capacity: usize) -> Self {
         Vec::with_capacity(capacity)
+    }
+
+    fn len(&self) -> usize {
+        Vec::len(self)
+    }
+
+    fn push(&mut self, elem: Self::Item) {
+        Vec::push(self, elem)
+    }
+
+    fn clear(&mut self) {
+        Vec::clear(self)
+    }
+}
+
+impl<T, A: Allocator> CollectionAlloc for Vec<T, A> {
+    type Item = T;
+    type Allocator = A;
+
+    fn with_capacity_in(capacity: usize, allocator: Self::Allocator) -> Self {
+        Vec::with_capacity_in(capacity, allocator)
+    }
+
+    fn allocator(&self) -> &Self::Allocator {
+        Vec::allocator(self)
     }
 
     fn len(&self) -> usize {

@@ -21,9 +21,10 @@
 
 use core::hash::{BuildHasher, Hash};
 
+use allocator_api2::alloc::Allocator;
 use hashbrown::{HashMap, HashSet, hash_map};
 
-use super::{Collection, CollectionMap, CollectionSet, MapEntry};
+use super::{Collection, CollectionAlloc, CollectionMap, CollectionSet, MapEntry};
 
 impl<T: Eq + Hash, S: BuildHasher + Default> Collection for HashSet<T, S> {
     type Item = T;
@@ -76,6 +77,33 @@ impl<T: Eq + Hash, S: BuildHasher + Default> CollectionSet for HashSet<T, S> {
 
     fn retain(&mut self, f: impl FnMut(&Self::Item) -> bool) {
         HashSet::retain(self, f)
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher + Default, A: Allocator + Clone> CollectionAlloc
+    for HashSet<T, S, A>
+{
+    type Item = T;
+    type Allocator = A;
+
+    fn with_capacity_in(capacity: usize, allocator: Self::Allocator) -> Self {
+        HashSet::with_capacity_and_hasher_in(capacity, S::default(), allocator)
+    }
+
+    fn allocator(&self) -> &Self::Allocator {
+        HashSet::allocator(self)
+    }
+
+    fn len(&self) -> usize {
+        HashSet::len(self)
+    }
+
+    fn push(&mut self, elem: Self::Item) {
+        HashSet::insert(self, elem);
+    }
+
+    fn clear(&mut self) {
+        HashSet::clear(self)
     }
 }
 
@@ -155,6 +183,33 @@ impl<K: Eq + Hash, V, S: BuildHasher + Default> CollectionMap for HashMap<K, V, 
 
     fn retain(&mut self, f: impl FnMut(&K, &mut V) -> bool) {
         HashMap::retain(self, f)
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher + Default, A: Allocator + Clone> CollectionAlloc
+    for HashMap<K, V, S, A>
+{
+    type Item = (K, V);
+    type Allocator = A;
+
+    fn with_capacity_in(capacity: usize, allocator: Self::Allocator) -> Self {
+        HashMap::with_capacity_and_hasher_in(capacity, S::default(), allocator)
+    }
+
+    fn allocator(&self) -> &Self::Allocator {
+        HashMap::allocator(self)
+    }
+
+    fn len(&self) -> usize {
+        HashMap::len(self)
+    }
+
+    fn push(&mut self, elem: Self::Item) {
+        HashMap::insert(self, elem.0, elem.1);
+    }
+
+    fn clear(&mut self) {
+        HashMap::clear(self)
     }
 }
 

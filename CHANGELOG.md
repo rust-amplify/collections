@@ -9,6 +9,8 @@ Change Log
   `CollectionMap`.
 - `CollectionSet` for common set operations on `BTreeSet`, `HashSet` and
   `IndexSet`.
+- `CollectionAlloc` for allocator-aware `Vec`, `hashbrown::HashMap` and
+  `hashbrown::HashSet` collections.
 - `deque!` and `heap!` macros for constructing `VecDeque` and `BinaryHeap`.
 - Feature-gated `hashbrown` implementations for `HashMap` and `HashSet`.
 - `Collection` implementations for `LinkedList` and `BinaryHeap`.
@@ -17,7 +19,7 @@ Change Log
 ### Changed
 
 - Renamed `KeyedCollection` to `CollectionMap`.
-- The crate now uses Rust edition 2024 and requires Rust 1.85.0 or later.
+- The crate now requires Rust 1.100.0 or later for stable allocator support.
 - Hash-based and index-based collection implementations now accept any hasher
   that implements `BuildHasher + Default`.
 - `BTreeMap` requires only `Ord` for its keys.
