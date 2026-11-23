@@ -58,6 +58,7 @@ pub extern crate heapless;
 /// Re-export of the optional `indexmap` dependency.
 pub extern crate indexmap;
 
+mod byte_array;
 mod traits;
 #[cfg(feature = "alloc")]
 mod linear;
@@ -84,6 +85,7 @@ mod fixed;
 #[doc(hidden)]
 pub extern crate std;
 
+pub use byte_array::{ByteArray, FromSliceError};
 pub use traits::{
     Collection, CollectionAlloc, CollectionBase, CollectionBytes, CollectionCapacity,
     CollectionEntry, CollectionMap, CollectionSet, MapEntry,
